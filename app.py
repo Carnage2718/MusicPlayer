@@ -143,4 +143,4 @@ def list_songs():
     cur.close()
     conn.close()
 
-    return "<br>".join([f"{r[0]}-{r[1]}" for r in rows])
+    return "<br>".join([f"{song[0]}-{song[1]}" for song in songs])
