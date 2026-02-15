@@ -126,3 +126,21 @@ def add_song():
             <button type="submit">Add</button>
         </form>
     """
+
+@app.route("/songs")
+def list_songs():
+    conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT s.title, a.name
+        FROM songs s
+        JOIN song_artists sa ON s.id = sa.song_id
+        JOIN artists a ON sa.artist_id = a.id;
+    """)
+
+    songs = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return "<br>".join([f"{r[0]}-{r[1]}" for r in rows])
