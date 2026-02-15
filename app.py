@@ -69,3 +69,35 @@ def initdb():
     conn.close()
 
     return "Database Initialized Successfully!"
+
+from flask import render_template, request, redirect
+
+@app.route("/add_song", methods=["GET", "POST"])
+def add_song():
+    if request.method == "POST":
+        title = request.form["title"]
+        release_year = request.form["release_year"]
+
+        conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+        cur = conn.cursor()
+
+        cur.execute("""
+            INSERT INTO songs (title, release_year, stream_url)
+            VALUES (%s, %s, %s)
+            RETURNING id;
+        """, (title, release_year, "dummy_url"))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return redirect("/")
+
+    return """
+        <h2>Add Song</h2>
+        <form method="POST">
+            Title: <input name="title"><br>
+            Release Year: <input name="release_year"><br>
+            <button type="submit">Add</button>
+        </form>
+    """
