@@ -24,7 +24,7 @@ def initdb():
         stream_url TEXT NOT NULL,
         original_url TEXT,
         cover_url TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
 
@@ -42,7 +42,7 @@ def initdb():
     CREATE TABLE IF NOT EXISTS song_artists (
         id SERIAL PRIMARY KEY,
         song_id INTEGER REFERENCES songs(id) ON DELETE CASCADE,
-        artist_id INTEGER REFERENCES artists(id) ON DELETE CASCADE
+        artist_id INTEGER REFERENCES artists(id) ON DELETE CASCADE,
         role TEXT NOT NULL CHECK (role IN ('main', 'featured'))
     );
     """)
