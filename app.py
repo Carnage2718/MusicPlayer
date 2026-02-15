@@ -101,3 +101,61 @@ def add_song():
             <button type="submit">Add</button>
         </form>
     """
+
+
+from flask import request, redirect
+
+@app.route("/add_song", methods=["GET", "POST"])
+def add_song():
+    if request.method == "POST":
+        title = request.form["title"]
+        artist_name = request.form["artist"]
+
+        conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+        cur = conn.cursor()
+
+        # ① 曲を追加
+        cur.execute("""
+            INSERT INTO songs (title)
+            VALUES (%s)
+            RETURNING id;
+        """, (title,))
+        song_id = cur.fetchone()[0]
+
+        # ② アーティストが既に存在するか確認
+        cur.execute("""
+            SELECT id FROM artists WHERE name = %s;
+        """, (artist_name,))
+        result = cur.fetchone()
+
+        if result:
+            artist_id = result[0]
+        else:
+            # 新規アーティスト登録
+            cur.execute("""
+                INSERT INTO artists (name)
+                VALUES (%s)
+                RETURNING id;
+            """, (artist_name,))
+            artist_id = cur.fetchone()[0]
+
+        # ③ 曲とアーティストを紐付け
+        cur.execute("""
+            INSERT INTO song_artists (song_id, artist_id, role)
+            VALUES (%s, %s, 'main');
+        """, (song_id, artist_id))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return redirect("/add_song")
+
+    return """
+        <h2>Add Song</h2>
+        <form method="POST">
+            Title: <input name="title"><br>
+            Artist: <input name="artist"><br>
+            <button type="submit">Add</button>
+        </form>
+    """
