@@ -3,6 +3,9 @@ import psycopg2
 from flask import Flask
 app = Flask(__name__)
 
+def get_connection():
+    return psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+
 @app.route("/")
 def home():
     return "Music Player is running!"
