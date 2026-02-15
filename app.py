@@ -13,6 +13,7 @@ import psycopg2
 @app.route("/dbtest")
 def dbtest():
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    cur = conn.cursor()
     cur.execute("SELECT 1;")
     result = cur.fetchone()
     cur.close()
