@@ -70,45 +70,13 @@ def initdb():
 
     return "Database Initialized Successfully!"
 
-from flask import render_template, request, redirect
-
-@app.route("/add_song", methods=["GET", "POST"])
-def add_song():
-    if request.method == "POST":
-        title = request.form["title"]
-        release_year = request.form["release_year"]
-
-        conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
-        cur = conn.cursor()
-
-        cur.execute("""
-            INSERT INTO songs (title, release_year, stream_url)
-            VALUES (%s, %s, %s)
-            RETURNING id;
-        """, (title, release_year, "dummy_url"))
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return redirect("/")
-
-    return """
-        <h2>Add Song</h2>
-        <form method="POST">
-            Title: <input name="title"><br>
-            Release Year: <input name="release_year"><br>
-            <button type="submit">Add</button>
-        </form>
-    """
-
-
 from flask import request, redirect
 
 @app.route("/add_song", methods=["GET", "POST"])
 def add_song():
     if request.method == "POST":
         title = request.form["title"]
+        release_year = request.form.get("release_year")
         artist_name = request.form["artist"]
 
         conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
@@ -116,22 +84,20 @@ def add_song():
 
         # ① 曲を追加
         cur.execute("""
-            INSERT INTO songs (title)
-            VALUES (%s)
+            INSERT INTO songs (title, release_year, stream_url)
+            VALUES (%s, %s, %s)
             RETURNING id;
-        """, (title,))
+        """, (title, release_year, "dummy_url"))
+
         song_id = cur.fetchone()[0]
 
-        # ② アーティストが既に存在するか確認
-        cur.execute("""
-            SELECT id FROM artists WHERE name = %s;
-        """, (artist_name,))
+        # ② アーティスト取得 or 作成
+        cur.execute("SELECT id FROM artists WHERE name = %s;", (artist_name,))
         result = cur.fetchone()
 
         if result:
             artist_id = result[0]
         else:
-            # 新規アーティスト登録
             cur.execute("""
                 INSERT INTO artists (name)
                 VALUES (%s)
@@ -139,7 +105,7 @@ def add_song():
             """, (artist_name,))
             artist_id = cur.fetchone()[0]
 
-        # ③ 曲とアーティストを紐付け
+        # ③ 紐付け
         cur.execute("""
             INSERT INTO song_artists (song_id, artist_id, role)
             VALUES (%s, %s, 'main');
@@ -155,6 +121,7 @@ def add_song():
         <h2>Add Song</h2>
         <form method="POST">
             Title: <input name="title"><br>
+            Release Year: <input name="release_year"><br>
             Artist: <input name="artist"><br>
             <button type="submit">Add</button>
         </form>
