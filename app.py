@@ -1,10 +1,16 @@
 import os
 import psycopg2
-from flask import Flask
+from flask import Flask, request, redirect
 app = Flask(__name__)
+from psycopg2 import pool
+
+bd_pool = pool.SimpleConnectionPool(1,10, os.environ["DATABASE_URL"], sslmode="require")
 
 def get_connection():
-    return psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+    return bd_pool.getconn()
+
+def release_connection(conn):
+    bd_pool.putconn(conn)
 
 @app.route("/")
 def home():
@@ -15,7 +21,7 @@ if __name__ == "__main__":
     
 @app.route("/initdb")
 def initdb():
-    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    conn = get_connection()
     cur = conn.cursor()
 
     #songs
@@ -73,50 +79,49 @@ def initdb():
 
     return "Database Initialized Successfully!"
 
-from flask import request, redirect
-
 @app.route("/add_song", methods=["GET", "POST"])
 def add_song():
     if request.method == "POST":
         title = request.form["title"]
-        release_year = request.form.get("release_year")
         artist_name = request.form["artist"]
 
-        conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+        conn = get_connection()
         cur = conn.cursor()
 
-        # ① 曲を追加
-        cur.execute("""
-            INSERT INTO songs (title, release_year, stream_url)
-            VALUES (%s, %s, %s)
-            RETURNING id;
-        """, (title, release_year, "dummy_url"))
-
-        song_id = cur.fetchone()[0]
-
-        # ② アーティスト取得 or 作成
-        cur.execute("SELECT id FROM artists WHERE name = %s;", (artist_name,))
-        result = cur.fetchone()
-
-        if result:
-            artist_id = result[0]
-        else:
+        try:
+            # ① 曲を追加
             cur.execute("""
-                INSERT INTO artists (name)
+                INSERT INTO songs (title)
                 VALUES (%s)
                 RETURNING id;
-            """, (artist_name,))
-            artist_id = cur.fetchone()[0]
+            """, (title,))
 
-        # ③ 紐付け
-        cur.execute("""
-            INSERT INTO song_artists (song_id, artist_id, role)
-            VALUES (%s, %s, 'main');
-        """, (song_id, artist_id))
+            song_id = cur.fetchone()[0]
 
-        conn.commit()
-        cur.close()
-        conn.close()
+            # ② アーティスト取得 or 作成
+            cur.execute("SELECT id FROM artists WHERE name = %s;", (artist_name,))
+            result = cur.fetchone()
+
+            if result:
+                artist_id = result[0]
+            else:
+                cur.execute("""
+                    INSERT INTO artists (name)
+                    VALUES (%s)
+                    RETURNING id;
+                """, (artist_name,))
+                artist_id = cur.fetchone()[0]
+
+            # ③ 紐付け
+            cur.execute("""
+                INSERT INTO song_artists (song_id, artist_id, role)
+                VALUES (%s, %s, 'main');
+            """, (song_id, artist_id))
+
+            conn.commit()
+        finally:
+            cur.close()
+            release_connection(conn)
 
         return redirect("/add_song")
 
@@ -124,7 +129,6 @@ def add_song():
         <h2>Add Song</h2>
         <form method="POST">
             Title: <input name="title"><br>
-            Release Year: <input name="release_year"><br>
             Artist: <input name="artist"><br>
             <button type="submit">Add</button>
         </form>
@@ -132,18 +136,19 @@ def add_song():
 
 @app.route("/songs")
 def list_songs():
-    conn = psycopg2.connect(os.environ["DATABASE_URL"], sslmode="require")
+    conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT s.title, a.name
-        FROM songs s
-        JOIN song_artists sa ON s.id = sa.song_id
-        JOIN artists a ON sa.artist_id = a.id;
-    """)
-
-    songs = cur.fetchall()
-    cur.close()
-    conn.close()
-
+    try:
+        cur.execute("""
+            SELECT s.title, a.name
+            FROM songs s
+            JOIN song_artists sa ON s.id = sa.song_id
+            JOIN artists a ON sa.artist_id = a.id;
+        """)
+        songs = cur.fetchall()
+    finally:
+        cur.close()
+        release_connection(conn)
+    
     return "<br>".join([f"{song[0]}-{song[1]}" for song in songs])
