@@ -1,0 +1,63 @@
+>>Cloudflare R2
+ACCOUNT_ID = "b5c85d39f96ff83f554c1aedf278736f"
+BUCKET_NAME = "musicplayer"
+R2_TOKEN = "e_Bd5sGvq9WPuGEIzbwtc5LXtpSKilcqutFJkCsK"
+ACCESS_KEY = "61798cf7e8e0ea59f62d9cf8819f8022"
+SECRET_KEY = "e6d0d1f3fffe2f27cce250161dcf8e62bb2e8d5476d0aee9bcb3fd6a3d5c76f8"
+ENDPOINT = "https://b5c85d39f96ff83f554c1aedf278736f.r2.cloudflarestorage.com"
+
+>>Google Drive
+SERVICE_ACCOUNT_FILE = "service_account.json"
+DRIVE FOLDER ID = "1mF-VFMvl-H7KXf-N7sajZ_VRfsJsJcB3"
+
+>>Neon Pstgre SQL
+DB_HOST = "ep-odd-term-ai11mw25-pooler.c-4.us-east-1.aws.neon.tech"
+DB_NAME = "neondb"
+DB_USER = "neondb_owner"
+DB_PASSWORD ="npg_3YbkV9TiOLoe"
+DB_PORT = 5432
+sslmode = "require"
+DB_URL = "postgresql://neondb_owner:npg_3YbkV9TiOLoe@ep-odd-term-ai11mw25-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+
+>>Render_API
+>>Render Postgre SQL
+DB_HOST = "dpg-d68q4n4r85hc73d09elg-a.oregon-postgres.render.com"
+DB_NAME = "musicplayer_db_p12q"
+DB_USER = "musicplayer_db_p12q_user"
+DB_PASSWORD ="NZdzhu4XBJAZ3YM9tysoaRhddDRFjaI2"
+DB_PORT = 5432
+DB_URL = "postgresql://musicplayer_db_p12q_user:NZdzhu4XBJAZ3YM9tysoaRhddDRFjaI2@dpg-d68q4n4r85hc73d09elg-a.oregon-postgres.render.com/musicplayer_db_p12q"
+
+>>psqlの開け方
+(psql "postgresql://musicplayer_db_p12q_user:NZdzhu4XBJAZ3YM9tysoaRhddDRFjaI2@dpg-d68q4n4r85hc73d09elg-a.oregon-postgres.render.com/musicplayer_db_p12q")
+
+psql "postgresql://neondb_owner:npg_3YbkV9TiOLoe@ep-odd-term-ai11mw25-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+>>uvicornの開け方
+cd music-api
+python -m uvicorn app.main:app --reload
+
+>>music-uiの起動方法
+cd music-ui\music-ui
+npm run dev
+
+
+>>drive関連のmoduleが判定されなかったとき
+pip install google_auth
+python -m pip install google-api-python-client
+
+>>fastapiのURL
+http://127.0.0.1:8000
+
+>>React
+http://localhost:5173/
+
+
+>>uvicornの開け方(iphone)
+cd music-api
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+>>music-ui(iphone)
+cd music-ui\music-ui
+npm run dev -- --host

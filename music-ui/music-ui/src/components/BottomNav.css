@@ -1,0 +1,128 @@
+.bottom-nav {
+
+  position: fixed;
+  bottom: 12px;
+
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  z-index: 20;
+
+  background:transparent;
+}
+
+
+/* 4ボタンカプセル */
+
+.nav-group {
+
+  height: 70px;
+
+  padding: 0 22px;
+
+  background: rgba(24, 24, 24, 0.95);
+
+  border-radius: 28px;
+
+  display: flex;
+  align-items: center;
+  gap: 26px;
+
+}
+
+
+/* 通常ボタン */
+
+.nav-btn {
+
+  background: none;
+  border: none;
+
+  color: #b3b3b3;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  font-size: 11px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+}
+
+.nav-btn span {
+
+  margin-top: 2px;
+
+}
+
+
+/* hover */
+
+.nav-btn:hover {
+
+  color: #1db954;
+
+}
+
+
+/* active */
+
+.nav-btn.active {
+
+  color: #1db954;
+
+}
+
+
+/* 検索 */
+
+.nav-search {
+
+  width: 65px;
+  height: 65px;
+
+  border-radius: 50%;
+
+  border: none;
+
+  background: rgba(24, 24, 24, 0.95);
+
+  color: #b3b3b3;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+}
+
+.nav-search span {
+
+  margin-top: 2px;
+
+}
+
+.nav-search:hover {
+
+  color: #1db954;
+
+}
+
+.nav-search.active {
+
+  color: #1db954;
+
+}

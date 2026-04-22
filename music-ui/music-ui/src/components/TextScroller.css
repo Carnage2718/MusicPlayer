@@ -1,0 +1,14 @@
+.text-scroller {
+  overflow-x: auto;
+  white-space: nowrap;
+  cursor: grab;
+}
+
+.text-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.text-inner {
+  display: inline-block;
+  padding-right: 20px;
+}

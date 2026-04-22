@@ -1,0 +1,202 @@
+.screen{
+
+  min-height:100%;
+
+  display:flex;
+  flex-direction:column;
+
+  color:white;
+
+}
+
+.screen-scroll{
+
+  height:100vh;
+
+  overflow-y:auto;
+  overflow-x:hidden;
+
+  scroll-behavior:smooth;
+
+  scrollbar-width:none;
+
+}
+
+.screen-scroll::-webkit-scrollbar{
+  width:0px;
+}
+
+.screen-container{
+
+  flex:1;
+
+  padding: var(--header-height) 18px 140px 18px;
+
+  z-index:1;
+
+  overflow:hidden;
+
+}
+
+.screen-content{
+
+  padding:24px;
+  padding-bottom:120px;
+
+}
+
+.song-list{
+  margin-top:10px;
+}
+
+.search-input{
+
+  width:100%;
+
+  padding:12px 16px;
+
+  border-radius:10px;
+
+  border:none;
+
+  background:#1a1a1a;
+
+  color:white;
+
+  margin-bottom:16px;
+
+}
+
+.upload-box{
+
+  margin-top:20px;
+
+  padding:30px;
+
+  border:1px dashed #444;
+
+  border-radius:14px;
+
+  text-align:center;
+
+}
+
+.upload-text{
+
+  font-size:18px;
+  margin-bottom:12px;
+
+}
+
+.upload-input{
+
+  margin:10px 0;
+
+}
+
+.upload-note{
+
+  font-size:13px;
+  color:#888;
+
+}
+
+.app-container{
+
+min-height:100vh;
+display:flex;
+flex-direction:column;
+position:relative;
+
+overscroll-behavior-y: none;
+
+}
+
+/* ジャケットぼかし背景 */
+
+.app-container::before{
+
+content:"";
+position:fixed;
+inset:0;
+
+background-image:var(--bg-image);
+background-size:cover;
+background-position:center;
+
+filter:blur(55px) brightness(0.45) saturate(1.2);
+
+transform:scale(1.25);
+
+z-index:-2;
+
+}
+
+/* 黒グラデーション */
+
+.app-container::after{
+
+content:"";
+position:fixed;
+inset:0;
+
+background:
+linear-gradient(
+to bottom,
+#000 0px,
+#000 120px,
+rgba(0,0,0,0.7) 260px,
+rgba(0,0,0,0.2) 420px,
+transparent 650px
+);
+
+z-index:-1;
+
+}
+
+/* 光粒子 */
+
+.app-container.full-open::before{
+
+animation:particleGlow 8s infinite alternate;
+
+}
+
+@keyframes particleGlow{
+
+0%{opacity:.6}
+100%{opacity:1}
+
+}
+
+.full-open .screen-container{
+
+overflow:hidden;
+
+}
+
+/* FullPlayer */
+
+.full-player{
+
+position:fixed;
+inset:0;
+
+z-index:999;
+
+display:flex;
+flex-direction:column;
+align-items:center;
+
+padding:30px;
+
+animation:slideUp .4s ease;
+
+}
+
+@keyframes slideUp{
+
+from{transform:translateY(100%)}
+to{transform:translateY(0)}
+
+}

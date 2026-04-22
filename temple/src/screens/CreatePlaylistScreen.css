@@ -1,0 +1,214 @@
+/* =========================
+   FORM
+========================= */
+.create-playlist-form{
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.create-playlist-form input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  background:#111;
+  color:white;
+  height:48px;
+}
+
+/* =========================
+   HERO
+========================= */
+.create-playlist-hero{
+  display:grid;
+  grid-template-columns: 1fr 180px;
+  gap:20px;
+}
+
+.create-playlist-left{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  max-width:500px;
+  width:100%;
+}
+
+/* =========================
+   SEARCH RESULT
+========================= */
+.search-result{
+  max-height:240px;
+  overflow-y:auto;
+  background:#0f0f0f;
+  border-radius:10px;
+  border:1px solid #222;
+}
+
+/* 選択中 */
+.selected{
+  background: rgba(29,185,84,0.2);
+}
+
+/* =========================
+   ACTION ROW
+========================= */
+.create-playlist-actions{
+  display:flex;
+  gap:10px;
+}
+
+.add-btn{
+  flex:1;
+  height:48px;
+  border:none;
+  border-radius:10px;
+  background:#1db954;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.add-btn:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+
+.create-btn{
+  flex:1;
+  height:48px;
+  border:none;
+  border-radius:10px;
+  background:#1db954;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* =========================
+   COVER
+========================= */
+.create-playlist-cover-wrap{
+  width:160px;
+  height:160px;
+}
+
+.create-playlist-cover,
+.create-playlist-placeholder{
+  width:100%;
+  height:100%;
+  border-radius:20px;
+}
+
+.create-playlist-placeholder{
+  background:#111;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+
+.auto-cover-text{
+  font-size:12px;
+  color:#aaa;
+}
+
+/* =========================
+   RIGHT SIDE
+========================= */
+.create-playlist-right{
+  width:160px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.submit-btn{
+  width:160px;
+  height:48px;
+  border:none;
+  border-radius:10px;
+  background:#1db954;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* =========================
+   TRACK LIST
+========================= */
+.track-list{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.track-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 4px;
+  border-bottom:1px solid #222;
+}
+
+/* 曲タイトル */
+.track-title{
+  flex:1;
+  font-size:14px;
+}
+
+/* 削除 */
+.track-remove{
+  color:#ff4d4f;
+  cursor:pointer;
+  font-size:14px;
+}
+
+/* =========================
+   SCROLL
+========================= */
+.search-result::-webkit-scrollbar{
+  width:6px;
+}
+
+.search-result::-webkit-scrollbar-thumb{
+  background:#333;
+  border-radius:10px;
+}
+
+.search-item {
+  outline: none;
+}
+
+.search-item.selected {
+  background: rgba(29,185,84,0.15);
+  border-radius: 8px;
+}
+
+/* =========================
+   LOADING
+========================= */
+.loading-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+.spinner{
+  width:16px;
+  height:16px;
+  border:2px solid #fff;
+  border-top:2px solid transparent;
+  border-radius:50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin{
+  to{
+    transform: rotate(360deg);
+  }
+}

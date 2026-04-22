@@ -1,0 +1,32 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background-color: #0f0f0f;
+  color: white;
+  overscroll-behavior: none;
+  user-select: none;
+  min-height: 100%;
+}
+
+body.dragging {
+  touch-action: none;
+}
+
+input, textarea {
+  user-select: text;
+  font-size: 16px;
+}
+
+#root {
+  height: 100vh;
+}
+
+html{
+  overscroll-behavior: none;
+  height :100%;
+}

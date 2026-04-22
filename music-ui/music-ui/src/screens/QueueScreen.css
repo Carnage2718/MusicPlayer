@@ -1,0 +1,227 @@
+.queue-screen{
+
+  height:calc(100vh - var(--header-height));
+  overflow:auto;
+  overflow-x:hidden;
+
+  padding-top:calc(var(--header-height) + 8px);
+  padding-bottom:80px;
+
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+
+  scrollbar-width:none;
+
+}
+
+.queue-screen::-webkit-scrollbar{
+  display:none;
+}
+
+.queue-scroll{
+  overflow:visible;
+}
+
+/* =================
+NOW PLAYING
+================= */
+
+.queue-now-wrapper{
+
+  border-radius:18px;
+  background:rgba(24,24,24,0.95);
+  box-shadow:0 8px 22px rgba(0,0,0,0.45);
+  margin:10px 0 6px 0;
+  overflow:hidden;
+  z-index:5;
+
+}
+
+.queue-now-player{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:6px 12px;
+}
+
+/* ⭐SongCard側 */
+.queue-now-main{
+  flex:1;
+  min-width:0;
+}
+
+/* =================
+COVER
+================= */
+
+.queue-cover{
+
+  width:48px;
+  height:48px;
+
+  border-radius:12px;
+
+  object-fit:cover;
+
+}
+
+.no-cover{
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:#2a2a2a;
+  color:#1db954;
+
+}
+
+/* =================
+CONTROLS
+================= */
+
+.queue-controls{
+
+  display:flex;
+  gap:18px;
+
+}
+
+.queue-controls button{
+
+  background:none;
+  border:none;
+
+  color:#b3b3b3;
+
+  cursor:pointer;
+
+}
+
+.queue-controls button:hover{
+
+  color:#1db954;
+
+}
+
+.queue-play-main{
+
+  color:#1db954;
+
+}
+
+/* =================
+PROGRESS
+================= */
+
+.queue-progress{
+
+  height:5px;
+  background:#222;
+
+  width:100%;
+
+}
+
+.queue-progress-fill{
+
+  height:100%;
+  background:#1db954;
+
+  transition:width .1s linear;
+
+}
+
+/* =================
+SECTION
+================= */
+
+.queue-section{
+
+  margin-top:8px;
+
+}
+
+.queue-subtitle{
+
+  font-size:13px;
+  color:#888;
+
+  margin-bottom:8px;
+
+}
+
+/* =================
+ROW
+================= */
+
+.queue-row{
+
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border-radius:10px;
+  cursor:default;
+
+}
+
+.queue-row:hover{
+  background:rgba(255,255,255,0.06);
+}
+
+.queue-info{
+
+  flex:1;
+
+}
+
+.queue-main{
+  flex:1;
+  min-width:0;
+}
+
+.drag{
+  width:40px;
+  display:flex;
+  justify-content:flex-end;
+  opacity:0.5;
+}
+
+/* =================
+SHUFFLE
+================= */
+
+.queue-header-row{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+}
+
+.shuffle-toggle{
+
+  background:none;
+  border:none;
+
+  color:#777;
+
+  cursor:pointer;
+
+}
+
+.shuffle-toggle.active{
+
+  color:#1db954;
+
+}
+
+.queue-artist-link {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.queue-artist-link:hover {
+  color: #1db954;
+}

@@ -1,0 +1,337 @@
+/* HERO */
+.playlist-hero{
+  display:flex;
+  gap:20px;
+  padding:16px;
+
+  align-items: flex-start;
+}
+
+.playlist-cover-wrap{
+  width:140px;
+  min-width: 140px;
+  min-height: 140px;
+  aspect-ratio:1/1;
+  border-radius:12px;
+
+  flex-shrink:0;
+
+  overflow:hidden;
+  background:#111;
+}
+
+.playlist-cover-wrap img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  align-items: center;
+}
+
+.playlist-meta{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  flex:1;
+  min-width: 0;
+}
+
+.playlist-name{
+  font-size:22px;
+  font-weight:bold;
+  color:#1db954;
+}
+
+.playlist-desc{
+  color:#aaa;
+  font-size:13px;
+}
+
+.playlist-count{
+  color:#aaa;
+  font-size:13px;
+}
+
+/* PLAY */
+
+.playlist-controls{
+
+  display:flex;
+  gap:12px;
+
+  margin-bottom:24px;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:  wrap;
+}
+
+.playlist-play{
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:#1db954;
+  border:none;
+  padding:10px 18px;
+  border-radius:20px;
+  font-weight:600;
+  cursor:pointer;
+  color:#000;
+
+}
+
+.playlist-shuffle{
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:#2a2a2a;
+  border:none;
+  color:white;
+  padding:10px 18px;
+  border-radius:20px;
+  cursor:pointer;
+
+}
+
+.playlist-shuffle.active {
+  background: #1db954;
+  color:#000;   
+}
+
+.playlist-add{
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  background:#2a2a2a;
+  border:none;
+  color:white;
+
+  padding:10px 16px;
+  border-radius:20px;
+
+  cursor:pointer;
+}
+
+.playlist-add.active{
+  background:#1db954;
+  color:#000;
+}
+
+.playlist-add:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+
+.playlist-play,
+.playlist-shuffle,
+.playlist-add{
+  min-width: 100px;
+  justify-content: center;
+}
+
+.playlist-shuffle:hover{
+  background:#3a3a3a;
+}
+
+.playlist-play:hover{
+  opacity:0.9;
+}
+
+/* TRACK */
+.playlist-tracks{
+  padding:16px;
+  touch-action:pan-y;
+}
+
+.playlist-track{
+  display:flex;
+  background:#000;
+  position:relative;
+  z-index:1;
+  align-items:center;
+  gap:10px;
+  transition: transform 0.2s ease;
+}
+
+.track-number{
+  color:#aaa;
+  width:24px;
+  text-align:center;
+}
+
+.drag{
+  cursor:pointer;
+  color:#666;
+}
+
+.track-main{
+    flex:1;
+    min-width:0;
+}
+
+.track-actions{
+  width:40px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+
+
+.add-modal{
+  position:absolute;
+  top:220px;
+  left:0;
+  right:0;
+
+  margin:0 auto;
+  width:100%;
+  max-width:500px;
+
+  background:#121212;
+  border-radius:12px;
+  border-top:1px solid #333;
+
+  z-index:1000;
+
+  animation: slideUp 0.2s ease;
+
+  box-shadow:0 10px 3px rgba(0,0,0,0.6);
+}
+
+@media (max-width: 500px){
+
+  .add-modal{
+    top: 330px;
+  }
+
+}
+
+.add-modal::-webkit-scrollbar{
+  width:6px;
+}
+
+.add-modal::-webkit-scrollbar-thumb{
+  background:#333;
+  border-radius:10px;
+}
+
+@keyframes slideUp{
+  from{
+    transform:translateY(100%);
+    opacity:0;
+  }
+  to{
+    transform:translateY(0);
+    opacity:1;
+  }
+}
+
+.add-modal input{
+  width:100%;
+  padding:10px 12px;
+  margin-bottom:12px;
+
+  background:#1e1e1e;
+  border:none;
+  border-radius:8px;
+
+  color:white;
+  font-size:16px;
+  outline:none;
+}
+
+.search-results{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+
+  max-height:300px;
+  overflow-y:auto;
+
+  padding-right: 4px;
+}
+
+.search-results::-webkit-scrollbar{
+  width:6px;
+}
+
+.search-results::-webkit-scrollbar-thumb{
+  background:#444;
+  border-radius:10px;
+}
+
+.search-results::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.search-results .active{
+  background:#1db95422;
+  border-radius:8px;
+}
+
+.drag{
+  cursor:grab;
+}
+
+.drag:active{
+  cursor:grabbing;
+}
+
+.dragging{
+  position:fixed;
+  transform:scale(1.05);
+  opacity:0.7;
+  z-index:10;
+  background:#1a1a1a;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+}
+
+.hovered{
+  border-top:2px solid #1db954;
+  margin-top:6px;
+}
+
+.playlist-track{
+  transition:all 0.15s ease;
+}
+
+/* wrapper */
+.playlist-track-wrapper{
+  position:relative;
+  overflow:hidden;
+}
+
+
+/* × */
+.delete-btn{
+  color:white;
+  font-size:22px;
+  border:none;
+  background:none;
+  cursor:pointer;
+}
+
+
+/* 🔥 追加 */
+@media (max-width: 500px){
+  .playlist-play,
+  .playlist-shuffle,
+  .playlist-add{
+    flex: 1;
+  }
+
+  .playlist-controls{
+    justify-content: center;
+  }
+  
+  .playlist-hero{
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .playlist-meta{
+    align-items: center;
+    text-align: center;
+  }
+}

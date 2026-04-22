@@ -1,0 +1,326 @@
+/* =========================
+   ARTIST HEADER
+========================= */
+
+.artist-header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin-bottom:30px;
+}
+
+.artist-image{
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.artist-placeholder{
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  background:#111;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.artist-icon{
+  color:#1db954;
+}
+
+.artist-name{
+  font-size:28px;
+  font-weight:700;
+  margin-top:12px;
+}
+
+.artist-plays{
+  color:#888;
+  font-size:14px;
+}
+
+.artist-meta{
+  color:#aaa;
+  font-size:13px;
+  margin-top:4px;
+}
+
+/* =========================
+   SECTION
+========================= */
+
+.artist-section{
+  margin-bottom:30px;
+}
+
+.section-title{
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:12px;
+}
+
+.artist-song-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.artist-song-row .song-card{
+  flex:1;
+}
+
+.artist-song-plays{
+  font-size:12px;
+  color:#aaa;
+  min-width:60px;
+  text-align:right;
+}
+
+/* =========================
+   ALBUM (横スクロール)
+========================= */
+
+.album-grid{
+  display:flex;
+  gap:14px;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+
+/* スクロールバー（黒・細い） */
+.album-grid::-webkit-scrollbar{
+  height:4px;
+}
+.album-grid::-webkit-scrollbar-track{
+  background:transparent;
+}
+.album-grid::-webkit-scrollbar-thumb{
+  background:#2a2a2a;
+  border-radius:10px;
+}
+.album-grid::-webkit-scrollbar-thumb:hover{
+  background:#3a3a3a;
+}
+
+/* Firefox */
+.album-grid{
+  scrollbar-width:thin;
+  scrollbar-color:#2a2a2a transparent;
+}
+
+/* ===== CARD ===== */
+
+.artist-album-card{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:120px;
+  cursor:pointer;
+  transition:transform 0.15s ease, opacity 0.15s ease;
+}
+
+.artist-album-card:hover{
+  transform:scale(1.05);
+  opacity:0.9;
+}
+
+.artist-album-cover{
+  width:120px;
+  height:120px;
+  border-radius:10px;
+  object-fit:cover;
+}
+
+.artist-album-placeholder{
+  width:120px;
+  height:120px;
+  border-radius:10px;
+  background:#111;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.artist-album-title{
+  font-size:13px;
+  font-weight:600;
+  color:#fff;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* =========================
+   RELATED ARTISTS
+========================= */
+
+.related-grid{
+  display:flex;
+  gap:14px;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+
+/* スクロールバー統一 */
+.related-grid::-webkit-scrollbar{
+  height:4px;
+}
+.related-grid::-webkit-scrollbar-track{
+  background:transparent;
+}
+.related-grid::-webkit-scrollbar-thumb{
+  background:#2a2a2a;
+  border-radius:10px;
+}
+.related-grid::-webkit-scrollbar-thumb:hover{
+  background:#3a3a3a;
+}
+
+.related-grid{
+  scrollbar-width:thin;
+  scrollbar-color:#2a2a2a transparent;
+}
+
+.related-card{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  min-width:110px;
+  cursor:pointer;
+  transition:transform 0.15s ease;
+}
+
+.related-card:hover{
+  transform:scale(1.05);
+}
+
+.related-image{
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.related-placeholder{
+  width:110px;
+  height:110px;
+  border-radius:50%;
+  background:#111;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.related-name{
+  font-size:13px;
+  color:#fff;
+  text-align:center;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:110px;
+}
+
+/* =========================
+   SONG CARD補助
+========================= */
+
+.song-cover{
+  width:48px;
+  height:48px;
+  border-radius:6px;
+  margin-right:10px;
+}
+
+.song-info{
+  display:flex;
+  flex-direction:column;
+}
+
+.song-artist{
+  font-size:12px;
+  color:#aaa;
+}
+
+/* =========================
+   LOADING
+========================= */
+
+.loading{
+  text-align:center;
+  padding:40px;
+  color:#aaa;
+}
+
+
+/* =================
+   SHUFFLE
+================= */
+.artist-shuffle{
+
+display:flex;
+align-items:center;
+gap:6px;
+
+background:#2a2a2a;
+border:none;
+
+color:white;
+
+padding:10px 18px;
+
+border-radius:20px;
+
+cursor:pointer;
+
+}
+
+.artist-shuffle.active {
+    background: #1db954;
+    color:#000;   
+}
+
+
+
+/* =================
+   PLAY
+================= */
+
+.artist-controls{
+
+  display:flex;
+  gap:12px;
+  margin-bottom:24px;
+
+  align-items:center;
+  justify-content:center;
+
+
+}
+
+.artist-play{
+
+display:flex;
+align-items:center;
+gap:6px;
+
+background:#1db954;
+border:none;
+
+padding:10px 18px;
+
+border-radius:20px;
+
+font-weight:600;
+
+cursor:pointer;
+
+}

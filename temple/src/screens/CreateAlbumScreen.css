@@ -1,0 +1,209 @@
+/* =========================
+   FORM
+========================= */
+.create-form{
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+
+}
+
+.create-form input{
+  width:100%;
+}
+
+/* =========================
+   INPUT
+========================= */
+.create-form input{
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  background:#111;
+  color:white;
+  height:48px;
+}
+
+/* =========================
+   HERO
+========================= */
+.create-album-hero{
+  display:grid;
+  grid-template-columns: 1fr 180px;
+  justify-content: center;
+  gap:20px;
+}
+
+.create-album-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+
+  max-width:500px;
+  width:100%;
+}
+
+/* =========================
+   COVER
+========================= */
+.create-album-artwork-wrap{
+  width:160px;
+  height:160px;
+}
+
+.create-album-artwork,
+.create-album-artwork-placeholder{
+  width:100%;
+  height:100%;
+  border-radius:20px;
+}
+
+.create-album-artwork-placeholder{
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* =========================
+   DROPDOWN
+========================= */
+.input-group{
+  position:relative;
+}
+
+.dropdown{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  background:#111;
+  border:1px solid #333;
+  border-radius:8px;
+  z-index:10;
+}
+
+.dropdown div{
+  padding:8px;
+  cursor:pointer;
+}
+
+.dropdown div:hover,
+.create-album-active{
+  background:#1db954;
+}
+
+/* =========================
+   BOTTOM
+========================= */
+.bottom-row{
+  display:flex;
+  gap:16px;
+  align-items:center;
+}
+
+.left-action{
+  width:100%;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+
+.track-input{
+  width:100%;
+  height:48px;
+}
+
+.add-btn{
+  width:100%;
+  height:48px;
+  border:none;
+  border-radius:10px;
+  background:#1db954;
+  color:white;
+  font-weight:bold;
+}
+
+.right-side{
+  width:160px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  align-items:stretch;
+}
+
+.submit-btn{
+  width:160px;
+  height:48px;
+  border:none;
+  border-radius:10px;
+  background:#1db954;
+  color:white;
+  font-weight:bold;
+}
+
+/* =========================
+   TRACK LIST
+========================= */
+.whole-track{
+  padding-bottom: 20px;
+}
+
+.track-list{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:13px;
+  color:#aaa;
+
+}
+
+.track-item{
+  display:flex;
+  justify-content:space-between;
+}
+
+.remove-btn{
+  color:#ff4d4f;
+  cursor:pointer;
+}
+
+/* =========================
+   EXISTING
+========================= */
+.existing{
+  margin-top:16px;
+  color:#aaa;
+}
+
+.feat{
+  color:white;
+  font-size:13px;
+}
+
+/* =========================
+   createbtn animation
+========================= */
+.loading-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+.spinner{
+  width:16px;
+  height:16px;
+  border:2px solid #fff;
+  border-top:2px solid transparent;
+  border-radius:50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin{
+  to{
+    transform: rotate(360deg);
+  }
+}
