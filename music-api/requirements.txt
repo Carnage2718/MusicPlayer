@@ -10,3 +10,5 @@ botocore
 requests
 
 pillow
+
+python-multipart
