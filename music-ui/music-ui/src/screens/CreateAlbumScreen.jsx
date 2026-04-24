@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import API_BASE from "../api"
 import AppHeader from "../components/AppHeader"
 import "./CreateAlbumScreen.css"
-import { Music, Youtube } from "lucide-react"
+import { Music } from "lucide-react"
 
 export default function CreateAlbumScreen({ onBack }){
 
