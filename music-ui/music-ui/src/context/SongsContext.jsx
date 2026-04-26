@@ -391,7 +391,7 @@ export function SongsProvider({ children }) {
     setCurrentId(id)
     setIsPlaying(true)
 
-    fetch(`${API_BASE}/queue/play/${id}`, {
+    await fetch(`${API_BASE}/queue/play/${id}`, {
       method: "POST"
     })
       .then(res => res.json())

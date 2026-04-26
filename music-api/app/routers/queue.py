@@ -144,23 +144,32 @@ def play_song(song_id: int):
     cur = conn.cursor()
 
     try:
-        # 🔥 存在確認
+        # 存在確認
         cur.execute("SELECT id FROM songs WHERE id=%s", (song_id,))
         if not cur.fetchone():
             return {"error": "song not found"}
+
+        # 🔥 queueロック（これが重要）
+        cur.execute("LOCK TABLE playback_queue IN EXCLUSIVE MODE")
 
         ids = get_queue_ids(cur)
 
         if song_id in ids:
             index = ids.index(song_id)
+
         else:
-            cur.execute("SELECT COALESCE(MAX(position), -1) FROM playback_queue")
-            last = cur.fetchone()[0]
+            # 🔥 position安全取得
+            cur.execute("""
+                SELECT COALESCE(MAX(position), -1) + 1
+                FROM playback_queue
+            """)
+            next_pos = cur.fetchone()[0]
 
             cur.execute("""
-                INSERT INTO playback_queue(song_id, position)
+                INSERT INTO playback_queue (song_id, position)
                 VALUES (%s, %s)
-            """, (song_id, last + 1))
+            """, (song_id, next_pos))
+
             index = len(ids)
 
         set_index(cur, index)
@@ -171,14 +180,14 @@ def play_song(song_id: int):
 
     except Exception as e:
         conn.rollback()
-        print("PLAY ERROR:", e)  # ←ログ出す
+        print("PLAY ERROR:", e)
         return {"error": str(e)}
 
     finally:
         cur.close()
         conn.close()
-
         
+                
 # =========================
 # next
 # =========================
