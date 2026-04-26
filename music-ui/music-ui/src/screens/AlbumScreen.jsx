@@ -4,6 +4,7 @@ import API_BASE from "../api"
 import "./AlbumScreen.css"
 import TextScroller from "../components/TextScroller"
 import AppHeader from "../components/AppHeader"
+import { useSongs } from "../context/SongsContext"
 
 export default function AlbumScreen({
   album,
@@ -14,6 +15,7 @@ export default function AlbumScreen({
   const [songs,setSongs] = useState([])
   const [loading,setLoading] = useState(true)
   const [isShuffle, setIsShuffle] = useState(true)
+  const { playFrom } = useSongs()
 
   /* =========================
      LOAD ALBUM DETAIL
@@ -65,16 +67,8 @@ export default function AlbumScreen({
   /* =========================
      PLAY ALL
   ========================= */
-
-  const playAll = async () => {
-
-    if (!album?.id) return
-
-    await fetch(`${API_BASE}/queue/from_album/${album.id}?shuffle=${isShuffle}`, {
-      method: "POST"
-    })
-
-    window.dispatchEvent(new Event("queueUpdated"))
+  const playAll = () => {
+    playFrom(`${API_BASE}/queue/from_album/${album.id}?shuffle=${isShuffle}`)
   }
 
   /* =========================

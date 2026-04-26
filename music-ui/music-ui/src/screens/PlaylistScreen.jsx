@@ -4,6 +4,7 @@ import AppHeader from "../components/AppHeader"
 import "./PlaylistScreen.css"
 import SongCard from "../components/SongCard"
 import API_BASE from "../api"
+import { useSongs } from "../context/SongsContext"
 
 export default function PlaylistScreen({
   playlist,
@@ -25,6 +26,7 @@ export default function PlaylistScreen({
   const dragRef = useRef(null)
   const [deleteMode, setDeleteMode] = useState(null)
   const lastTap = useRef(0)
+  const { playFrom } = useSongs()
 
   if(!playlist) return null
 
@@ -146,15 +148,8 @@ export default function PlaylistScreen({
      PLAY ALL
   ========================= */
 
-  const playAll = async () => {
-
-    if (!playlist?.id) return
-
-    await fetch(`${API_BASE}/queue/from_playlist/${playlist.id}?shuffle=${isShuffle}`, {
-      method: "POST"
-    })
-
-    window.dispatchEvent(new Event("queueUpdated"))
+  const playAll = () => {
+    playFrom(`${API_BASE}/queue/from_playlist/${playlist.id}?shuffle=${isShuffle}`)
   }
 
   /* =========================

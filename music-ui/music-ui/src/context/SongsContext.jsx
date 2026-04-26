@@ -12,7 +12,7 @@ export function SongsProvider({ children }) {
       return null
     }
   })
-  const audioRef = useRef(new Audio())
+  const audioRef = useRef(null)
   const [currentId, setCurrentId] = useState(null)
   const [queueIds, setQueueIds] = useState([])
   const [current, setCurrent] = useState(null)
@@ -29,7 +29,18 @@ export function SongsProvider({ children }) {
   const nextCache = useRef({})
   const userInteracted = useRef(false)
   const preloadRef = useRef(new Audio())
+  const isStartingRef = useRef(false)
 
+  
+  /* =========================
+     audioref init
+  ========================= */
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio()
+      audioRef.current.preload = "auto"
+    }
+  }, [])
 
   /* =========================
      HomeCache
@@ -153,12 +164,9 @@ export function SongsProvider({ children }) {
       setCurrent(song)
 
       const audio = audioRef.current
-      audio.src = stream
-      audio.preload = "auto"
-      audio.load()
 
-      if (userInteracted.current) {
-        audio.play().catch(()=>{})
+      if (audio.src !== stream) {
+        audio.src = stream
       }
     }
 
@@ -233,13 +241,11 @@ export function SongsProvider({ children }) {
     const audio = audioRef.current
     if (!audio) return
 
-    if (isPlaying) {
-      audio.play().catch(()=>{})
-    } else {
+    if (!isPlaying) {
       audio.pause()
     }
 
-  }, [isPlaying, current])
+  }, [isPlaying])
 
   /* =========================
      PROGRESS
@@ -366,8 +372,23 @@ export function SongsProvider({ children }) {
 
     if (current) pushHistory(current)
 
-    setCurrentId(id)
     userInteracted.current = true
+
+    const audio = audioRef.current
+
+    let stream = await getStream(id)
+
+    if (!stream) return
+
+    audio.src = stream
+
+    try {
+      await audio.play() // 🔥 ここが最重要
+    } catch (e) {
+      console.warn("play blocked", e)
+    }
+
+    setCurrentId(id)
     setIsPlaying(true)
 
     fetch(`${API_BASE}/queue/play/${id}`, {
@@ -424,6 +445,96 @@ export function SongsProvider({ children }) {
 
   }, [])
 
+
+  /* =========================
+     Queue From 
+  ========================= */
+
+  const playFrom = async (endpoint) => {
+
+    if (isStartingRef.current) return
+    isStartingRef.current = true
+
+    try {
+
+      userInteracted.current = true
+
+      const res = await fetch(endpoint, { method: "POST" })
+      const data = await res.json()
+
+      const firstId = data.current
+      if (!firstId) return
+
+      const stream = await getStream(firstId)
+      if (!stream) return
+
+      const audio = audioRef.current
+      audio.src = stream
+
+      setCurrentId(firstId)
+
+      await audio.play()
+
+      setIsPlaying(true)
+      applyQueue(data)
+
+    } catch (e) {
+      console.error(e)
+    } finally {
+      isStartingRef.current = false
+    }
+  }
+
+  /* =========================
+     Media Session
+  ========================= */
+
+  const formatArtists = (artists = []) => {
+    const main = artists.filter(a => a.role === "main").map(a => a.name)
+    const ft = artists.filter(a => a.role === "featuring").map(a => a.name)
+
+    if (ft.length > 0) {
+      return `${main.join(", ")} ft. ${ft.join(", ")}`
+    }
+
+    return main.join(", ")
+  }
+
+  useEffect(() => {
+    if (!current || !("mediaSession" in navigator)) return
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: current.title,
+      artist: formatArtists(current.artists),
+      artwork: [
+        {
+          src: current.image || `${window.location.origin}/icon_rock_square.png`,
+          sizes: "512x512",
+          type: "image/png"
+        }
+      ]
+    })
+
+  }, [current])
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return
+
+    navigator.mediaSession.setActionHandler("play", () => {
+      audioRef.current.play()
+      setIsPlaying(true)
+    })
+
+    navigator.mediaSession.setActionHandler("pause", () => {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    })
+
+    navigator.mediaSession.setActionHandler("nexttrack", nextSong)
+    navigator.mediaSession.setActionHandler("previoustrack", prevSong)
+
+  }, [])
+
   
   /* =========================
       PRELOAD NEXT
@@ -460,7 +571,8 @@ export function SongsProvider({ children }) {
         shuffleQueue,
         audioRef,
         homeData,
-        setHomeData
+        setHomeData,
+        playFrom
       }}
     >
       {children}

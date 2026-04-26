@@ -21,7 +21,7 @@ export default function SongsScreen({
 
   const letterRefs = useRef({})
 
-  const { setIsPlaying, setCurrentId } = useSongs()
+  const { playFrom } = useSongs()
 
   /* ======================
      LOAD SONGS
@@ -77,31 +77,8 @@ export default function SongsScreen({
      from_songs
   ====================== */
 
-  const playSongs = async () => {
-
-    if (isCreatingQueue) return 
-
-    setIsCreatingQueue(true)
-
-    try {
-
-      const res = await fetch(`${API_BASE}/queue/from_songs?shuffle=${isShuffle}`, {
-        method: "POST"
-      })
-
-      const data = await res.json()
-
-      setCurrentId(data.current)
-
-      setIsPlaying(true)
-
-      window.dispatchEvent(new Event("queueUpdated"))
-
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setIsCreatingQueue(false)
-    }
+  const playSongs = () => {
+    playFrom(`${API_BASE}/queue/from_songs?shuffle=${isShuffle}`)
   }
 
   const toggleShuffle = () => {

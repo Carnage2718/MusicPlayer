@@ -12,7 +12,7 @@ export default function HomeScreen({
   openAlbum
 }) {
 
-  const { homeData, setHomeData } = useSongs()
+  const { playFrom, homeData, setHomeData } = useSongs()
 
   const data = homeData || {
     recent: [],
@@ -56,24 +56,9 @@ export default function HomeScreen({
      HOMEEVENT
   ========================= */
 
-  const HomeEvent = useCallback(async () => {
-
-    try {
-      const res = await fetch(`${API_BASE}/queue/from_recent`, {
-        method: "POST"
-      })
-
-      const data = await res.json()
-
-      if (data.current) {
-        onSelectSong({ id: data.current }) // 🔥 ここ変更
-      }
-
-    } catch (e) {
-      console.error(e)
-    }
-
-  }, [onSelectSong])
+  const HomeEvent = () => {
+    playFrom(`${API_BASE}/queue/from_recent`)
+  }
 
   /* =========================
      STATION CARD（構造維持）

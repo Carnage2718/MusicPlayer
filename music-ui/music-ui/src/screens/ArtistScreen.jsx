@@ -5,6 +5,7 @@ import AppHeader from "../components/AppHeader"
 import API_BASE from "../api"
 import SongCard from "../components/SongCard"
 import TextScroller from "../components/TextScroller"
+import { useSongs } from "../context/SongsContext"
 
 export default function ArtistScreen({ 
   artistId, 
@@ -17,6 +18,7 @@ export default function ArtistScreen({
   const [error, setError] = useState(null)
   const [isShuffle, setIsShuffle] = useState(true)
   const lastTap = useRef(0)
+  const { playFrom } = useSongs()
 
   /* =========================
      LOAD ARTIST
@@ -113,13 +115,7 @@ export default function ArtistScreen({
   ========================= */
 
   const playArtist = async () => {
-
-    
-    await fetch(`${API_BASE}/queue/from_artist/${artistId}?shuffle=${isShuffle}`,
-      { method: "POST" }
-    )
-
-    window.dispatchEvent(new Event("queueUpdated"))
+    playFrom(`${API_BASE}/queue/from_artist/${artistId}?shuffle=${isShuffle}`)
   }
 
   const toggleShuffle = () => {
