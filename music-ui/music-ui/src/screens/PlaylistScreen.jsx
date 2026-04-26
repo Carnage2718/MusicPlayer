@@ -85,10 +85,11 @@ export default function PlaylistScreen({
   },[selectedIndex])
 
   useEffect(()=>{
+
+    if(!isDragging) return
+
     const handleTouchMove = (e)=>{
-      if(isDragging){
-        e.preventDefault()
-      }
+      e.preventDefault()
     }
 
     window.addEventListener("touchmove", handleTouchMove, { passive:false })
@@ -96,6 +97,7 @@ export default function PlaylistScreen({
     return ()=>{
       window.removeEventListener("touchmove", handleTouchMove)
     }
+
   },[isDragging])
 
   useEffect(()=>{
@@ -104,9 +106,6 @@ export default function PlaylistScreen({
         e.preventDefault()
       }
     }
-
-    window.addEventListener("touchstart", handleTouchStart, { passive:false })
-
     return ()=>{
       window.removeEventListener("touchstart", handleTouchStart)
     }

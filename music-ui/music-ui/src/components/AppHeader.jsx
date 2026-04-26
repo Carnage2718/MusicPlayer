@@ -7,7 +7,7 @@ export default function AppHeader({ title }) {
     <div className="app-header">
 
       <img
-        src="/headphone_transparent_stretched.png"
+        src="/icon_nobackground.png"
         className="app-header-icon"
         alt="MusicPlayer"
       />

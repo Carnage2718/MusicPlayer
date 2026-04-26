@@ -23,6 +23,8 @@
   height:48px;
 
   flex-shrink:0;
+  border-radius: 6px;
+  overflow:hidden;
 
 }
 
@@ -41,8 +43,8 @@
 
 .cover-placeholder{
 
-  width:48px;
-  height:48px;
+  width:100%;
+  height:100%;
 
   border-radius:6px;
 
@@ -64,6 +66,7 @@
 
   flex:1;
   min-width:0;
+  overflow: hidden;
 
 }
 

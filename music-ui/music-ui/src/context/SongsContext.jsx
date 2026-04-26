@@ -4,78 +4,88 @@ import API_BASE from "../api"
 const SongsContext = createContext()
 
 export function SongsProvider({ children }) {
-
-  /* =========================
-     🔥 AUDIO（強化）
-  ========================= */
-  const audioRef = useRef(new Audio()) // ←ここ変更（超重要）
-
-  /* =========================
-     STATE（そのまま維持）
-  ========================= */
+  const [homeData, setHomeData] = useState(() => {
+    try {
+      const saved = localStorage.getItem("homeCache")
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
+  const audioRef = useRef(new Audio())
   const [currentId, setCurrentId] = useState(null)
   const [queueIds, setQueueIds] = useState([])
   const [current, setCurrent] = useState(null)
   const [queue, setQueue] = useState([])
-  const [history, setHistory] = useState([])
+  const [history, setHistory] = useState(() => {
+    const saved = localStorage.getItem("history")
+    return saved ? JSON.parse(saved) : []
+  })
   const [historyMeta, setHistoryMeta] = useState([])
-
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [homeData, setHomeData] = useState(null)
-
-  const streamCache = useRef({})
   const songCache = useRef({})
-  const playedRef = useRef(null)
-  const countedRef = useRef({})
+  const streamCache = useRef({})
+  const nextCache = useRef({})
   const userInteracted = useRef(false)
+  const preloadRef = useRef(new Audio())
+
+
+  /* =========================
+     HomeCache
+  ========================= */
+  useEffect(() => {
+    if (homeData) {
+      localStorage.setItem("homeCache", JSON.stringify(homeData))
+    }
+  }, [homeData])
 
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
 
-    const songIdAtStart = currentId
-
-    const handleTimeUpdate = () => {
-      if (!songIdAtStart) return
-
-      if (
-        !countedRef.current[songIdAtStart] &&
-        audio.currentTime >= 30
-      ) {
-        fetch(`${API_BASE}/songs/${songIdAtStart}/play`, {
-          method: "POST"
-        }).catch(()=>{})
-
-        countedRef.current[songIdAtStart] = true
-      }
+    const handler = () => {
+      setHomeData(null)
     }
 
-    const handleEnded = () => {
-      if (
-        !countedRef.current[songIdAtStart] &&
-        songIdAtStart
-      ) {
-        fetch(`${API_BASE}/songs/${songIdAtStart}/play`, {
-          method: "POST"
-        }).catch(()=>{})
-
-        countedRef.current[songIdAtStart] = true
-      }
-    }
-
-    audio.addEventListener("timeupdate", handleTimeUpdate)
+    window.addEventListener("homeUpdated", handler)
 
     return () => {
-      audio.removeEventListener("timeupdate", handleTimeUpdate)
+      window.removeEventListener("homeUpdated", handler)
     }
 
-  }, [currentId])
+  }, [])
+
+
+  /* =========================
+     QUEUE APPLY（最重要）
+  ========================= */
+
+  const applyQueue = (data) => {
+
+    if (data.current !== undefined) {
+      setCurrentId(data.current)
+    }
+
+    if (data.queue !== undefined) {
+      setQueueIds([...data.queue])
+    }
+  }
+
+  /* =========================
+     INIT
+  ========================= */
+
+  useEffect(() => {
+    fetch(`${API_BASE}/queue`)
+      .then(res => res.json())
+      .then(applyQueue)
+  }, [])
 
   /* =========================
      SONG META
   ========================= */
+
   const getSongMeta = async (id) => {
+
     if (songCache.current[id]) return songCache.current[id]
 
     const res = await fetch(`${API_BASE}/songs/${id}`)
@@ -97,54 +107,26 @@ export function SongsProvider({ children }) {
      STREAM
   ========================= */
   const getStream = async (id) => {
-    if (streamCache.current[id]) return streamCache.current[id]
-
-    const res = await fetch(`${API_BASE}/songs/${id}/stream`)
-    const data = await res.json()
-
-    streamCache.current[id] = data.stream_url
-    return data.stream_url
-  }
-
-  /* =========================
-     🔥 QUEUE（サーバー同期）
-  ========================= */
-  const loadQueue = async () => {
     try {
-      const res = await fetch(`${API_BASE}/queue`)
+      if (streamCache.current[id]) return streamCache.current[id]
+
+      const res = await fetch(`${API_BASE}/songs/${id}/stream`)
+      if (!res.ok) throw new Error()
+
       const data = await res.json()
 
-      // 🔥 current変わった時だけ更新
-      if (data.current !== currentId) {
-        setCurrentId(data.current || null)
-      }
+      streamCache.current[id] = data.stream_url
+      return data.stream_url
 
-      setQueueIds(data.queue || [])
-    } catch (e) {
-      console.error("queue load error", e)
+    } catch {
+      return null // 🔥 安全
     }
   }
 
   /* =========================
-     INIT
+     CURRENT
   ========================= */
-  useEffect(() => {
-    loadQueue()
 
-    // 🔥 スマホ対策（audio unlock）
-    const unlock = () => {
-      const a = audioRef.current
-      a.play().then(() => a.pause()).catch(() => {})
-      document.removeEventListener("click", unlock)
-    }
-
-    document.addEventListener("click", unlock)
-
-  }, [])
-
-  /* =========================
-     CURRENT LOAD
-  ========================= */
   useEffect(() => {
 
     if (!currentId) return
@@ -153,36 +135,42 @@ export function SongsProvider({ children }) {
 
     const load = async () => {
 
-      const [meta, stream] = await Promise.all([
-        getSongMeta(currentId),
-        getStream(currentId)
-      ])
+      const id = currentId
 
-      if (cancelled) return
+      const meta = await getSongMeta(id)
+
+      let stream =
+        nextCache.current[id] ||
+        streamCache.current[id]
+
+      if (!stream) {
+        stream = await getStream(id)
+      }
+
+      if (cancelled || id !== currentId) return // 🔥 追加
 
       const song = { ...meta, url: stream }
-
       setCurrent(song)
 
       const audio = audioRef.current
+      audio.src = stream
+      audio.preload = "auto"
+      audio.load()
 
-      if (!audio.src || !audio.src.includes(stream)) {
-        audio.src = stream
+      if (userInteracted.current) {
+        audio.play().catch(()=>{})
       }
-
-      audio.play().catch(() => {})
-
     }
 
     load()
     return () => { cancelled = true }
-    
 
   }, [currentId])
 
   /* =========================
-     QUEUE LOAD（軽量）
+     QUEUE（軽量ロード）
   ========================= */
+
   useEffect(() => {
 
     if (!queueIds.length) {
@@ -191,43 +179,28 @@ export function SongsProvider({ children }) {
     }
 
     let cancelled = false
-
+    
     const load = async () => {
 
-      const arr = []
-
-      // 🔥 ① 最初の20曲 → 優先ロード
-      const priority = queueIds.slice(0, 20)
-
-      const firstBatch = await Promise.all(
-        priority.map(id => getSongMeta(id))
+      const first = await Promise.all(
+        queueIds.slice(0, 20).map(getSongMeta)
       )
 
       if (cancelled) return
+      setQueue([...first])
 
-      setQueue(firstBatch)
-
-      // 🔥 ② 残りはバックグラウンド
       const rest = queueIds.slice(20)
 
-      for (let i = 0; i < rest.length; i++) {
+      for (let id of rest) {
 
         if (cancelled) return
 
-        const meta = await getSongMeta(rest[i])
-        arr.push(meta)
+        const meta = await getSongMeta(id)
 
-        // 🔥 少しずつ反映（軽量）
-        if (i % 5 === 0) {
-          setQueue(prev => [...prev, ...arr])
-          arr.length = 0
-        }
+        setQueue(prev => [...prev, meta])
 
-        // 🔥 UIに処理を返す（超重要）
         await new Promise(r => setTimeout(r, 0))
       }
-
-      setQueue(prev => [...prev, ...arr])
     }
 
     load()
@@ -236,149 +209,50 @@ export function SongsProvider({ children }) {
 
   }, [queueIds])
 
+  useEffect(() => {
+
+    if (!queueIds.length) return
+
+    const nextId = queueIds[0]
+
+    if (!nextCache.current[nextId]) {
+      getStream(nextId).then(url => {
+        nextCache.current[nextId] = url
+        streamCache.current[nextId] = url
+      })
+    }
+
+  }, [queueIds])
+
 
   /* =========================
-     AUDIO CONTROL
+     AUDIO
   ========================= */
+
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
-    isPlaying ? audio.play().catch(() => {}) : audio.pause()
-
-  }, [isPlaying])
-
-  /* =========================
-     🔥 NEXT（サーバー基準）
-  ========================= */
-  const nextSong = async () => {
-
-    if (current) {
-      setHistory(prev => {
-        const next = [
-          ...prev,
-          {
-            song_id: current.song_id,
-            played_at: Date.now()
-          }
-        ]
-
-        return next.slice(-50) // 制限
-      })
+    if (isPlaying) {
+      audio.play().catch(()=>{})
+    } else {
+      audio.pause()
     }
 
-    try {
-      const res = await fetch(`${API_BASE}/queue/next`, {
-        method: "POST"
-      })
-
-      const data = await res.json()
-
-      if (data.song_id) {
-        setCurrentId(data.song_id)
-        setIsPlaying(true)
-
-        if(data.queue){
-          setQueueIds(data.queue)
-        }else{
-          loadQueue() // 変更：サーバーから新しいキューを取得
-        }
-      }
-
-    } catch (e) {
-      console.error(e)
-    }
-
-
-  }
-
-  /* =========================
-     PREV（サーバー）
-  ========================= */
-  const prevSong = () => {
-
-    setHistory(prev => {
-
-      if (!prev.length) return prev
-
-      const last = prev[prev.length - 1]
-
-      setCurrentId(last.song_id)
-
-      return prev.slice(0, -1)
-    })
-  }
-
-  /* =========================
-     PLAY
-  ========================= */
-  const playSong = async (song) => {
-
-    const id = song.song_id || song.id
-
-    // 🔥 currentをhistoryへ（軽量版）
-    if (current) {
-      setHistory(prev => {
-        const next = [
-          ...prev,
-          {
-            song_id: current.song_id,
-            played_at: Date.now()
-          }
-        ]
-        return next.slice(-50)
-      })
-    }
-
-    // 🔥 先にUIを確定させる
-    setCurrentId(id)
-    userInteracted.current = true
-    setIsPlaying(true)
-
-    // 🔥 後でサーバー同期（遅れてOK）
-    fetch(`${API_BASE}/queue/play/${id}`, {
-      method: "POST"
-    }).catch(() => {})
-
-    // ❌ loadQueueは消す（これが原因）
-  }
-
-  /* =========================
-     SHUFFLE
-  ========================= */
-  const shuffleQueue = async () => {
-
-    await fetch(`${API_BASE}/queue/shuffle`, {
-      method: "POST"
-    })
-
-    loadQueue()
-  }
-
-  /* =========================
-     🔥 END（最重要）
-  ========================= */
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const handleEnded = () => nextSong()
-
-    audio.addEventListener("ended", handleEnded)
-    return () => audio.removeEventListener("ended", handleEnded)
-
-  }, [])
+  }, [isPlaying, current])
 
   /* =========================
      PROGRESS
   ========================= */
+
   useEffect(() => {
+
     const audio = audioRef.current
     if (!audio) return
 
     let raf
 
-    const update = () => {
+    const loop = () => {
 
       if (audio.duration) {
         setProgress((audio.currentTime / audio.duration) * 100)
@@ -386,10 +260,12 @@ export function SongsProvider({ children }) {
         setProgress(0)
       }
 
-      raf = requestAnimationFrame(update)
+      raf = requestAnimationFrame(loop)
     }
 
-    raf = requestAnimationFrame(update)
+    setProgress(0)
+    raf = requestAnimationFrame(loop)
+
     return () => cancelAnimationFrame(raf)
 
   }, [current])
@@ -397,6 +273,21 @@ export function SongsProvider({ children }) {
   /* =========================
      HISTORY
   ========================= */
+
+  useEffect(() => {
+    localStorage.setItem("history", JSON.stringify(history))
+  }, [history])
+
+  const pushHistory = (song) => {
+    setHistory(prev => {
+      const next = [...prev, {
+        song_id: song.song_id,
+        played_at: Date.now()
+      }]
+      return next.slice(-50)
+    })
+  }
+
   useEffect(() => {
 
     if (!history.length) {
@@ -410,19 +301,15 @@ export function SongsProvider({ children }) {
 
       const arr = []
 
-      const list = [...history]
-
-      for (let i = 0; i < list.length; i++) {
+      for (let h of history) {
 
         if (cancelled) return
 
-        const meta = await getSongMeta(list[i].song_id)
-
+        const meta = await getSongMeta(h.song_id)
         arr.push(meta)
 
-        // 🔥 軽量逐次反映（UI止めない）
-        if (i % 5 === 0) {
-          setHistoryMeta(prev => [...arr])
+        if (arr.length % 5 === 0) {
+          setHistoryMeta([...arr])
           await new Promise(r => setTimeout(r, 0))
         }
       }
@@ -431,25 +318,131 @@ export function SongsProvider({ children }) {
     }
 
     load()
-
     return () => { cancelled = true }
 
   }, [history])
 
+  /* =========================
+     NEXT
+  ========================= */
 
+  const nextSong = async () => {
+
+    if (current) pushHistory(current)
+
+    const res = await fetch(`${API_BASE}/queue/next`, {
+      method: "POST"
+    })
+
+    const data = await res.json()
+
+    setIsPlaying(true) // 🔥 追加
+
+    applyQueue(data)
+  }
+  /* =========================
+     PREV
+  ========================= */
+
+  const prevSong = async () => {
+
+    const res = await fetch(`${API_BASE}/queue/previous`, {
+      method: "POST"
+    })
+
+    const data = await res.json()
+
+    applyQueue(data)
+
+  }
 
   /* =========================
-     QUEUE UPDATE
+     PLAY
   ========================= */
+
+  const playSong = async (song) => {
+
+    const id = song.song_id || song.id
+
+    if (current) pushHistory(current)
+
+    setCurrentId(id)
+    userInteracted.current = true
+    setIsPlaying(true)
+
+    fetch(`${API_BASE}/queue/play/${id}`, {
+      method: "POST"
+    })
+      .then(res => res.json())
+      .then(applyQueue)
+  }
+
+  /* =========================
+     SHUFFLE
+  ========================= */
+
+  const shuffleQueue = async () => {
+
+    const res = await fetch(`${API_BASE}/queue/shuffle`, {
+      method: "POST"
+    })
+
+    const data = await res.json()
+    applyQueue(data)
+  }
+
+  /* =========================
+     MENU COMPONENT
+  ========================= */
+
   useEffect(() => {
 
-    const handler = () => loadQueue()
+    const handler = (e) => {
+      applyQueue(e.detail)
+    }
 
-    window.addEventListener("queueUpdated", handler)
-    return () => window.removeEventListener("queueUpdated", handler)
+    window.addEventListener("queueApply", handler)
+
+    return () => {
+      window.removeEventListener("queueApply", handler)
+    }
 
   }, [])
 
+  /* =========================
+     END
+  ========================= */
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const ended = () => nextSong()
+
+    audio.addEventListener("ended", ended)
+    return () => audio.removeEventListener("ended", ended)
+
+  }, [])
+
+  
+  /* =========================
+      PRELOAD NEXT
+  ========================= */
+
+  useEffect(() => {
+
+    if (!queueIds.length) return
+
+    const nextId = queueIds[0]
+
+    getStream(nextId).then(url => {
+
+      preloadRef.current.src = url
+      preloadRef.current.preload = "auto"
+
+    })
+
+  }, [queueIds])
 
   return (
     <SongsContext.Provider
@@ -467,7 +460,7 @@ export function SongsProvider({ children }) {
         shuffleQueue,
         audioRef,
         homeData,
-        setHomeData,
+        setHomeData
       }}
     >
       {children}

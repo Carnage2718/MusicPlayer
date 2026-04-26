@@ -146,3 +146,19 @@
   cursor:pointer;
 
 }
+
+.songs-total{
+
+  text-align:right;
+
+  padding:16px 30px;
+
+  margin-top:4px;
+
+  color:#aaa;
+
+  font-size:12px;
+
+  opacity:0.8;
+
+}

@@ -49,7 +49,7 @@ export default function SongMenu({
 
     window.addEventListener("scroll", close)
     window.addEventListener("wheel", close)
-    window.addEventListener("touchmove", close)
+    window.addEventListener("touchmove", close, {passive:true})
 
     return () => {
       window.removeEventListener("scroll", close)
@@ -61,12 +61,25 @@ export default function SongMenu({
 
 
   const addQueue = async () => {
-    await fetch(`${API_BASE}/queue/add?song_id=${song.id}`, { method:"POST" })
+    const res = await fetch(`${API_BASE}/queue/add?song_id=${song.id}`, { 
+      method:"POST" 
+    })
+
+    const data = await res.json()
+
+    window.dispatchEvent(new CustomEvent("queueApply", {detail:data}))
+    
     onClose()
   }
 
   const addNext = async () => {
-    await fetch(`${API_BASE}/queue/add_next?song_id=${song.id}`, { method:"POST" })
+    const res = await fetch(`${API_BASE}/queue/add_next?song_id=${song.id}`, { 
+      method:"POST" 
+    })
+
+    const data = await res.json()
+
+    window.dispatchEvent(new CustomEvent("queueApply", {detail:data}))
     onClose()
   }
 

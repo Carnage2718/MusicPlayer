@@ -28,7 +28,7 @@ export default function HomeScreen({
 
   useEffect(() => {
 
-    if (homeData) return
+    if (homeData && homeData.recent?.length) return
 
     let mounted = true
 
@@ -118,7 +118,7 @@ export default function HomeScreen({
               <>
                 {main.map((a, i) => (
                   <span
-                    key={a.id}
+                    key={`${a.id ?? a.name}-${i}`}
                     className="artist-link"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -212,7 +212,7 @@ export default function HomeScreen({
             {data.recent.map(song => (
 
               <StationCard
-                key={song.song_id}
+                key={`${song.song_id}-${song.title}`}
                 title={song.title}
                 artists={song.artists}
                 image={song.image}

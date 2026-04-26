@@ -79,6 +79,24 @@ def build_queue(songs, shuffle=False):
     return current, queue
 
 
+def save_history(cur, song_id):
+    # ① 追加
+    cur.execute("""
+        INSERT INTO play_history (song_id)
+        VALUES (%s)
+    """, (song_id,))
+
+    # ② 50件制限
+    cur.execute("""
+        DELETE FROM play_history
+        WHERE id NOT IN (
+            SELECT id FROM play_history
+            ORDER BY played_at DESC
+            LIMIT 50
+        )
+    """)
+
+
 # =========================
 # queue取得
 # =========================
@@ -136,10 +154,13 @@ def play_song(song_id: int):
         if song_id in ids:
             index = ids.index(song_id)
         else:
-            cur.execute(
-                "INSERT INTO playback_queue(song_id) VALUES(%s)",
-                (song_id,)
-            )
+            cur.execute("SELECT COALESCE(MAX(position), -1) FROM playback_queue")
+            last = cur.fetchone()[0]
+
+            cur.execute("""
+                INSERT INTO playback_queue(song_id, position)
+                VALUES (%s, %s)
+            """, (song_id, last + 1))
             index = len(ids)
 
         set_index(cur, index)
@@ -169,12 +190,22 @@ def next_song():
     cur = conn.cursor()
 
     try:
+
         ids = get_queue_ids(cur)
         current_index, loop_mode = get_state(cur)
 
+        if not ids:
+            return {"current": None, "queue": []}
+
         # repeat one
         if loop_mode == "one":
-            return {"song_id": ids[current_index]}
+            return {
+                "current": ids[current_index],
+                "queue": ids[current_index + 1:]
+            }
+
+        current_song = ids[current_index]
+        save_history(cur, current_song)
 
         next_index = current_index + 1
 
@@ -182,39 +213,47 @@ def next_song():
         if next_index < len(ids):
             set_index(cur, next_index)
             conn.commit()
-            return {"song_id": ids[next_index]}
 
         # repeat all
-        if loop_mode == "all" and ids:
+        elif loop_mode == "all":
             set_index(cur, 0)
             conn.commit()
-            return {"song_id": ids[0]}
 
-        # 🔥 radio
-        cur.execute("""
-            SELECT id
-            FROM songs
-            WHERE is_radio_allowed = true
-            ORDER BY RANDOM()
-            LIMIT 1
-        """)
-        row = cur.fetchone()
+        else:
+            # radio
+            cur.execute("""
+                SELECT id
+                FROM songs
+                WHERE is_radio_allowed = true
+                ORDER BY RANDOM()
+                LIMIT 1
+            """)
+            row = cur.fetchone()
 
-        if not row:
-            return {"song_id": None}
+            if not row:
+                return {"current": None, "queue": []}
 
-        song_id = row[0]
+            song_id = row[0]
 
-        cur.execute(
-            "INSERT INTO playback_queue(song_id) VALUES(%s)",
-            (song_id,)
-        )
+            cur.execute("SELECT COALESCE(MAX(position), -1) FROM playback_queue")
+            last = cur.fetchone()[0]
 
-        set_index(cur, len(ids))
+            cur.execute("""
+                INSERT INTO playback_queue(song_id, position)
+                VALUES (%s, %s)
+            """, (song_id, last + 1))
 
-        conn.commit()
+            set_index(cur, len(ids))
+            conn.commit()
 
-        return {"song_id": song_id}
+        # 🔥 最後に統一して返す
+        ids = get_queue_ids(cur)
+        current_index, _ = get_state(cur)
+
+        return {
+            "current": ids[current_index],
+            "queue": ids[current_index + 1:]
+        }
 
     finally:
         cur.close()
@@ -235,20 +274,27 @@ def prev_song():
         ids = get_queue_ids(cur)
         current_index, _ = get_state(cur)
 
+        if not ids:
+            return {"current": None, "queue": []}
+
         if current_index <= 0:
-            return {"song_id": ids[0] if ids else None}
+            new_index = 0
+        else:
+            new_index = current_index - 1
 
-        new_index = current_index - 1
         set_index(cur, new_index)
-
         conn.commit()
 
-        return {"song_id": ids[new_index]}
+        return {
+            "current": ids[new_index],
+            "queue": ids[new_index + 1:]
+        }
 
     finally:
         cur.close()
         conn.close()
-
+        
+        
 # =========================
 # from_songs
 # =========================
@@ -615,7 +661,10 @@ def shuffle_queue():
 
         conn.commit()
 
-        return {"status": "ok"}
+        return {
+            "current": current,
+            "queue": rest
+        }
 
     finally:
         cur.close()
@@ -643,7 +692,13 @@ def reorder(ids: list[int] = Body(...)):
 
         conn.commit()
 
-        return {"status": "ok"}
+        ids = get_queue_ids(cur)
+        current_index, _ = get_state(cur)
+
+        return {
+            "current": ids[current_index],
+            "queue": ids[current_index + 1:]
+        }
 
     finally:
         cur.close()
@@ -688,16 +743,13 @@ def add_to_queue(song_id: int = Query(...)):
     cur = conn.cursor()
 
     try:
-        # 存在確認
         cur.execute("SELECT id FROM songs WHERE id=%s", (song_id,))
         if not cur.fetchone():
             return {"error": "song not found"}
 
-        # 最後のposition取得
         cur.execute("SELECT COALESCE(MAX(position), -1) FROM playback_queue")
         last = cur.fetchone()[0]
 
-        # 追加
         cur.execute("""
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
@@ -705,12 +757,21 @@ def add_to_queue(song_id: int = Query(...)):
 
         conn.commit()
 
-        return {"success": True}
+        # 🔥 追加（重要）
+        ids = get_queue_ids(cur)
+        current_index, _ = get_state(cur)
+
+        current = ids[current_index] if ids else None
+        queue = ids[current_index + 1:] if ids else []
+
+        return {
+            "current": current,
+            "queue": queue
+        }
 
     finally:
         cur.close()
         conn.close()
-
 
 
 # =========================
@@ -724,20 +785,32 @@ def add_next(song_id: int = Query(...)):
     cur = conn.cursor()
 
     try:
-        # 現在位置取得
-        cur.execute("SELECT current_index FROM playback_state WHERE id=1")
-        current_index = cur.fetchone()[0]
+        # 曲存在確認
+        cur.execute("SELECT 1 FROM songs WHERE id=%s", (song_id,))
+        if not cur.fetchone():
+            return {"error": "song not found"}
 
-        insert_pos = current_index + 1
+        ids = get_queue_ids(cur)
+        current_index, _ = get_state(cur)
 
-        # 後ろをずらす
+        cur.execute("""
+            SELECT COUNT(*) FROM playback_queue
+        """)
+        count = cur.fetchone()[0]
+
+        insert_pos = min(current_index + 1, count)
+
         cur.execute("""
             UPDATE playback_queue
             SET position = position + 1
-            WHERE position >= %s
+            WHERE id IN (
+                SELECT id FROM playback_queue
+                WHERE position >= %s
+                ORDER BY position DESC
+            )
         """, (insert_pos,))
 
-        # 挿入
+        # 🔥 insert
         cur.execute("""
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
@@ -745,11 +818,29 @@ def add_next(song_id: int = Query(...)):
 
         conn.commit()
 
-        return {"success": True}
+        # 🔥 正規化（軽量版）
+        cur.execute("""
+            UPDATE playback_queue
+            SET position = sub.new_pos
+            FROM (
+                SELECT id,
+                       ROW_NUMBER() OVER (ORDER BY position) - 1 AS new_pos
+                FROM playback_queue
+            ) sub
+            WHERE playback_queue.id = sub.id
+        """)
+
+        conn.commit()
+
+        ids = get_queue_ids(cur)
+        current_index, _ = get_state(cur)
+
+        return {
+            "current": ids[current_index] if ids else None,
+            "queue": ids[current_index + 1:] if ids else []
+        }
 
     finally:
         cur.close()
         conn.close()
 
-
-        

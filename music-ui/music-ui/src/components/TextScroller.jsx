@@ -19,14 +19,28 @@ export default function TextScroller({ text, className }) {
       scrollLeft = el.scrollLeft
     }
 
+    let moved = false
+
     const move = (x) => {
       if (!isDown) return
       const walk = (startX - x)
+
+      if (Math.abs(walk) > 5) {
+        moved = true
+      }
+
       el.scrollLeft = scrollLeft + walk
     }
 
     const end = () => {
       isDown = false
+
+      if (moved) {
+        el.dataset.dragged = "true"
+        setTimeout(()=> el.dataset.dragged = "", 0)
+      }
+
+      moved = false
     }
 
     // mouse

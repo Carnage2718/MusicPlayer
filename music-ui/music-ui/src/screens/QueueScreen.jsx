@@ -133,14 +133,16 @@ export default function QueueScreen({
     const [moved] = newQueue.splice(fromIndex, 1)
     newQueue.splice(toIndex, 0, moved)
 
-    // UI反映
-    // queueはcontext側なので直接変更できない → ここは後でAPI同期のみ
-    // 👉 今は簡易対応：API後同期でもOK
-
     fetch(`${API_BASE}/queue/reorder`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newQueue.map(s => s.song_id))
+    })
+    .then(res => res.json())
+    .then(data => {
+      window.dispatchEvent(
+        new CustomEvent("queueApply", { detail: data })
+      )
     })
 
     setDragSong(null)
@@ -166,7 +168,7 @@ export default function QueueScreen({
     return ()=>{
       audio.removeEventListener("timeupdate", update)
     }
-  }, [audioRef])
+  }, [audioRef.current])
 
   /* =========================
      PLAYER（完全即時）
@@ -301,7 +303,7 @@ export default function QueueScreen({
 
           {queue.map((song, index) => (
             <div
-              key={`queue-${song.song_id}-${index}`}
+              key={`queue-${song.song_id}-${queue.length}-${index}`}
               className="queue-row"
               draggable
               onDragStart={() => setDragSong(song)}
