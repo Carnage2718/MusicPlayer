@@ -218,34 +218,8 @@ def next_song():
         elif loop_mode == "all":
             set_index(cur, 0)
             conn.commit()
-
         else:
-            # radio
-            cur.execute("""
-                SELECT id
-                FROM songs
-                WHERE is_radio_allowed = true
-                ORDER BY RANDOM()
-                LIMIT 1
-            """)
-            row = cur.fetchone()
-
-            if not row:
-                return {"current": None, "queue": []}
-
-            song_id = row[0]
-
-            cur.execute("SELECT COALESCE(MAX(position), -1) FROM playback_queue")
-            last = cur.fetchone()[0]
-
-            cur.execute("""
-                INSERT INTO playback_queue(song_id, position)
-                VALUES (%s, %s)
-            """, (song_id, last + 1))
-
-            set_index(cur, len(ids))
-            conn.commit()
-
+            return{"current": None, "queue": []}
         # 🔥 最後に統一して返す
         ids = get_queue_ids(cur)
         current_index, _ = get_state(cur)
