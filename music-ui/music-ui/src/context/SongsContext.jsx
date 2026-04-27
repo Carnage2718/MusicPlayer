@@ -167,6 +167,11 @@ export function SongsProvider({ children }) {
 
       if (audio.src !== stream) {
         audio.src = stream
+        audio.load()
+      }
+
+      if (userInteracted.current){
+        audio.play().catch(()=>{})
       }
     }
 
@@ -241,11 +246,13 @@ export function SongsProvider({ children }) {
     const audio = audioRef.current
     if (!audio) return
 
-    if (!isPlaying) {
+    if (isPlaying) {
+      audio.play().catch(()=>{})
+    } else {
       audio.pause()
     }
 
-  }, [isPlaying])
+  }, [isPlaying, current]) // 🔥 current追加
 
   /* =========================
      PROGRESS
