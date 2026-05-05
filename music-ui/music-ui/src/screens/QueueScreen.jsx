@@ -43,22 +43,6 @@ export default function QueueScreen({
   const [dragSong, setDragSong] = useState(null)
   const [progress, setProgress] = useState(0)
 
-  useEffect(() => {
-    const el = document.querySelector(".queue-screen")
-    if (!el) return
-
-    const headerHeight = parseInt(
-      getComputedStyle(document.documentElement)
-        .getPropertyValue("--header-height")
-    ) || 72
-
-    el.scrollTo({
-      top: headerHeight,
-      behavior: "auto"
-    })
-
-  }, [])
-
   /* INITIAL SCROLL（変更なし） */
   useLayoutEffect(() => {
 
@@ -98,22 +82,24 @@ export default function QueueScreen({
 
   useEffect(() => {
 
-    const target = document.querySelector(".queue-now-wrapper")
-    if (!target) return
+    if (!nowPlayingRef.current) return
 
-    const headerHeight = parseInt(
-      getComputedStyle(document.documentElement)
-        .getPropertyValue("--header-height")
-    ) || 72
+    const container = document.querySelector(".queue-screen")
+    if (!container) return
+
+    const headerHeight =
+      parseInt(getComputedStyle(document.documentElement)
+        .getPropertyValue("--header-height")) || 72
 
     const y =
-      target.getBoundingClientRect().top +
-      window.scrollY -
-      headerHeight
+      nowPlayingRef.current.getBoundingClientRect().top +
+      container.scrollTop -
+      headerHeight - 20
 
-    window.scrollTo({ top: y })
+    container.scrollTo({ top: y, behavior: "auto" })
 
-  }, [])
+  }, [currentSong])
+
 
   /* =========================
      DRAG（軽量化）

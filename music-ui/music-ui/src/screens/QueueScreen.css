@@ -142,6 +142,10 @@ SECTION
 
 }
 
+.queue-section:last-child {
+  min-height: 120px; /* 好きな高さ */
+}
+
 .queue-subtitle{
 
   font-size:13px;

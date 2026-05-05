@@ -1,0 +1,74 @@
+.login-screen{
+  position:relative;
+  width:100%;
+  height:100vh;
+  overflow:hidden;
+  background:#05070d;
+}
+
+/* =========================
+   背景Canvas
+========================= */
+.bg-canvas{
+  position:absolute;
+  inset:0;
+}
+
+/* =========================
+   フォーム
+========================= */
+.login-box{
+  position:absolute;
+  bottom:80px;
+  left:50%;
+  transform:translateX(-50%);
+
+  width:320px;
+
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  padding:20px;
+
+  border-radius:12px;
+
+  /* ガラス感 */
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+/* 入力 */
+.login-box input{
+  height:42px;
+  padding:0 12px;
+
+  border-radius:8px;
+  border:none;
+
+  outline:none;
+
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+}
+
+/* ボタン */
+.login-box button{
+  height:42px;
+  border:none;
+  border-radius:8px;
+
+  background:linear-gradient(90deg,#3a7bd5,#a044ff);
+  color:#fff;
+
+  cursor:pointer;
+}
+
+/* 注意文 */
+.login-note{
+  font-size:12px;
+  opacity:0.6;
+  text-align:center;
+}

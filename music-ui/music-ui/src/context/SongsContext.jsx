@@ -30,7 +30,18 @@ export function SongsProvider({ children }) {
   const userInteracted = useRef(false)
   const preloadRef = useRef(new Audio())
   const isStartingRef = useRef(false)
+  const [repeatMode, setRepeatMode] = useState("none")
+  const repeatModeRef = useRef(repeatMode)
 
+
+  
+  /* =========================
+     repeatModeRef init
+  ========================= */
+
+  useEffect(() => {
+    repeatModeRef.current = repeatMode
+  }, [repeatMode])
   
   /* =========================
      audioref init
@@ -170,7 +181,7 @@ export function SongsProvider({ children }) {
         audio.load()
       }
 
-      if (userInteracted.current){
+      if (userInteracted.current || isPlaying){
         audio.play().catch(()=>{})
       }
     }
@@ -349,8 +360,17 @@ export function SongsProvider({ children }) {
 
     const data = await res.json()
 
-    setIsPlaying(true) // 🔥 追加
+    // 🔥 repeat all（queue空のとき）
+    if ((!data.current || !data.queue?.length) && repeatMode === "all") {
+      const restart = await fetch(`${API_BASE}/queue/restart`, {
+        method: "POST"
+      })
+      const restartData = await restart.json()
+      applyQueue(restartData)
+      return
+    }
 
+    setIsPlaying(true)
     applyQueue(data)
   }
   /* =========================
@@ -445,12 +465,24 @@ export function SongsProvider({ children }) {
     const audio = audioRef.current
     if (!audio) return
 
-    const ended = () => nextSong()
+    const ended = () => {
+
+      const audio = audioRef.current
+
+      if (repeatModeRef.current === "one" && audio) {
+        audio.currentTime = 0
+        audio.play().catch(()=>{})
+        return
+      }
+
+      if (current) pushHistory(current)
+      nextSong()
+    }
 
     audio.addEventListener("ended", ended)
     return () => audio.removeEventListener("ended", ended)
 
-  }, [])
+  }, [current, repeatMode])
 
 
   /* =========================
@@ -478,12 +510,14 @@ export function SongsProvider({ children }) {
       const audio = audioRef.current
       audio.src = stream
 
+      applyQueue(data)
+
       setCurrentId(firstId)
 
       await audio.play()
 
       setIsPlaying(true)
-      applyQueue(data)
+
 
     } catch (e) {
       console.error(e)
@@ -579,7 +613,9 @@ export function SongsProvider({ children }) {
         audioRef,
         homeData,
         setHomeData,
-        playFrom
+        playFrom,
+        repeatMode,
+        setRepeatMode
       }}
     >
       {children}

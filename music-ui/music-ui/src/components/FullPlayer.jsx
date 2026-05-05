@@ -24,8 +24,6 @@ export default function FullPlayer({
   setCurrentScreen,
   shuffleMode,
   setShuffleMode,
-  repeatMode,
-  setRepeatMode,
   onOpenArtist
 }) {
 
@@ -34,7 +32,7 @@ export default function FullPlayer({
 
   const [currentTime,setCurrentTime] = useState(0)
   const [duration,setDuration] = useState(0)
-  const { nextSong, prevSong, audioRef } = useSongs()
+  const { nextSong, prevSong, audioRef, repeatMode, setRepeatMode } = useSongs()
 
   if(!song) return null
 
@@ -110,12 +108,10 @@ export default function FullPlayer({
      REPEAT
   ========================= */
 
-  const toggleRepeat = ()=>{
-
-    if(repeatMode === "none") setRepeatMode("all")
-    else if(repeatMode === "all") setRepeatMode("one")
+  const toggleRepeat = () => {
+    if (repeatMode === "none") setRepeatMode("all")
+    else if (repeatMode === "all") setRepeatMode("one")
     else setRepeatMode("none")
-
   }
 
   /* =========================
