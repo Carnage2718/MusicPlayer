@@ -14,13 +14,10 @@ export function SongsProvider({ children }) {
   })
   const audioRef = useRef(null)
   const [currentId, setCurrentId] = useState(null)
+  const countedRef = useRef(false)
   const [queueIds, setQueueIds] = useState([])
   const [current, setCurrent] = useState(null)
   const [queue, setQueue] = useState([])
-  const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem("history")
-    return saved ? JSON.parse(saved) : []
-  })
   const [historyMeta, setHistoryMeta] = useState([])
   const [isPlaying, setIsPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -31,17 +28,7 @@ export function SongsProvider({ children }) {
   const preloadRef = useRef(new Audio())
   const isStartingRef = useRef(false)
   const [repeatMode, setRepeatMode] = useState("none")
-  const repeatModeRef = useRef(repeatMode)
 
-
-  
-  /* =========================
-     repeatModeRef init
-  ========================= */
-
-  useEffect(() => {
-    repeatModeRef.current = repeatMode
-  }, [repeatMode])
   
   /* =========================
      audioref init
@@ -74,6 +61,28 @@ export function SongsProvider({ children }) {
       window.removeEventListener("homeUpdated", handler)
     }
 
+  }, [])
+
+  /* =========================
+    HISTORY INIT
+  ========================= */
+
+  const loadHistory = async () => {
+
+    try {
+
+      const res = await fetch(`${API_BASE}/history`)
+      const data = await res.json()
+
+      setHistoryMeta(data)
+
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadHistory()
   }, [])
 
 
@@ -191,6 +200,10 @@ export function SongsProvider({ children }) {
 
   }, [currentId])
 
+  useEffect(() => {
+    countedRef.current = false
+  }, [currentId])
+
   /* =========================
      QUEUE（軽量ロード）
   ========================= */
@@ -263,7 +276,7 @@ export function SongsProvider({ children }) {
       audio.pause()
     }
 
-  }, [isPlaying, current]) // 🔥 current追加
+  }, [isPlaying, current]) 
 
   /* =========================
      PROGRESS
@@ -279,7 +292,21 @@ export function SongsProvider({ children }) {
     const loop = () => {
 
       if (audio.duration) {
-        setProgress((audio.currentTime / audio.duration) * 100)
+        const percent =
+          (audio.currentTime / audio.duration) * 100
+
+        setProgress(percent)
+
+        if (
+          !countedRef.current &&
+          currentId &&
+          audio.duration > 0 &&
+          percent >= 50
+        ) {
+
+          countedRef.current = true
+
+        }
       } else {
         setProgress(0)
       }
@@ -294,85 +321,50 @@ export function SongsProvider({ children }) {
 
   }, [current])
 
-  /* =========================
-     HISTORY
-  ========================= */
-
-  useEffect(() => {
-    localStorage.setItem("history", JSON.stringify(history))
-  }, [history])
-
-  const pushHistory = (song) => {
-    setHistory(prev => {
-      const next = [...prev, {
-        song_id: song.song_id,
-        played_at: Date.now()
-      }]
-      return next.slice(-50)
-    })
-  }
-
-  useEffect(() => {
-
-    if (!history.length) {
-      setHistoryMeta([])
-      return
-    }
-
-    let cancelled = false
-
-    const load = async () => {
-
-      const arr = []
-
-      for (let h of history) {
-
-        if (cancelled) return
-
-        const meta = await getSongMeta(h.song_id)
-        arr.push(meta)
-
-        if (arr.length % 5 === 0) {
-          setHistoryMeta([...arr])
-          await new Promise(r => setTimeout(r, 0))
-        }
-      }
-
-      setHistoryMeta(arr)
-    }
-
-    load()
-    return () => { cancelled = true }
-
-  }, [history])
 
   /* =========================
      NEXT
   ========================= */
 
-  const nextSong = async () => {
+  const nextSong = async ({
+    ignoreRepeatOne = false
+  } = {}) => {
 
-    if (current) pushHistory(current)
+    const before = currentId
 
-    const res = await fetch(`${API_BASE}/queue/next`, {
-      method: "POST"
-    })
+    const res = await fetch(
+      `${API_BASE}/queue/next?ignore_repeat_one=${ignoreRepeatOne}`, 
+      {
+        method: "POST"
+      }
+    )
 
     const data = await res.json()
 
-    // 🔥 repeat all（queue空のとき）
-    if ((!data.current || !data.queue?.length) && repeatMode === "all") {
-      const restart = await fetch(`${API_BASE}/queue/restart`, {
-        method: "POST"
-      })
-      const restartData = await restart.json()
-      applyQueue(restartData)
+    applyQueue(data)
+
+    // repeat one
+    if (data.current === before) {
+
+      const audio = audioRef.current
+
+      if (audio) {
+        audio.currentTime = 0
+
+        try {
+          await audio.play()
+        } catch {}
+      }
+
+      setIsPlaying(true)
+
       return
     }
 
-    setIsPlaying(true)
-    applyQueue(data)
+    setIsPlaying(!!data.current)
   }
+
+
   /* =========================
      PREV
   ========================= */
@@ -396,8 +388,6 @@ export function SongsProvider({ children }) {
   const playSong = async (song) => {
 
     const id = song.song_id || song.id
-
-    if (current) pushHistory(current)
 
     userInteracted.current = true
 
@@ -465,24 +455,49 @@ export function SongsProvider({ children }) {
     const audio = audioRef.current
     if (!audio) return
 
-    const ended = () => {
+    const ended = async () => {
 
-      const audio = audioRef.current
+      // 50%以上再生済みならhistory追加
+      if (countedRef.current && currentId) {
 
-      if (repeatModeRef.current === "one" && audio) {
-        audio.currentTime = 0
-        audio.play().catch(()=>{})
-        return
+        try {
+
+          await fetch(`${API_BASE}/songs/${currentId}/play`, {
+            method: "POST"
+          })
+
+          await loadHistory()
+
+        } catch (e) {
+          console.error(e)
+        }
       }
 
-      if (current) pushHistory(current)
-      nextSong()
+      await nextSong()
     }
 
     audio.addEventListener("ended", ended)
     return () => audio.removeEventListener("ended", ended)
 
-  }, [current, repeatMode])
+  }, [current])
+
+
+  const changeRepeatMode = async (mode) => {
+
+    setRepeatMode(mode)
+
+    try {
+
+      await fetch(`${API_BASE}/queue/mode?loop=${mode}`, {
+        method: "POST"
+      })
+
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+
 
 
   /* =========================
@@ -571,7 +586,13 @@ export function SongsProvider({ children }) {
       setIsPlaying(false)
     })
 
-    navigator.mediaSession.setActionHandler("nexttrack", nextSong)
+    navigator.mediaSession.setActionHandler(
+      "nexttrack", 
+      () => nextSong({
+        ignoreRepeatOne: true
+      })
+    )
+
     navigator.mediaSession.setActionHandler("previoustrack", prevSong)
 
   }, [])
@@ -596,13 +617,23 @@ export function SongsProvider({ children }) {
 
   }, [queueIds])
 
+
+  useEffect(() => {
+
+    fetch(`${API_BASE}/queue/mode`)
+      .then(r => r.json())
+      .then(data => {
+        setRepeatMode(data.loop)
+      })
+
+  }, [])
+
+
   return (
     <SongsContext.Provider
       value={{
         currentSong: current,
         queue,
-        history,
-        historyMeta,
         isPlaying,
         progress,
         playSong,
@@ -613,9 +644,10 @@ export function SongsProvider({ children }) {
         audioRef,
         homeData,
         setHomeData,
+        historyMeta,
         playFrom,
         repeatMode,
-        setRepeatMode
+        setRepeatMode: changeRepeatMode
       }}
     >
       {children}

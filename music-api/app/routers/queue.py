@@ -97,6 +97,118 @@ def save_history(cur, song_id):
     """)
 
 
+def save_queue_context(
+    cur,
+    source_type,
+    source_id,
+    track_ids,
+    original_order,
+    shuffle_mode
+):
+
+    cur.execute("""
+        DELETE FROM queue_context
+    """)
+
+    cur.execute("""
+        INSERT INTO queue_context (
+            source_type,
+            source_id,
+            track_ids,
+            original_order,
+            shuffle_mode
+        )
+        VALUES (%s, %s, %s, %s, %s)
+    """, (
+        source_type,
+        source_id,
+        track_ids,
+        original_order,
+        shuffle_mode
+    ))
+
+
+def get_latest_queue_context(cur):
+
+    cur.execute("""
+        SELECT
+            source_type,
+            source_id,
+            track_ids,
+            original_order,
+            shuffle_mode
+        FROM queue_context
+        ORDER BY created_at DESC
+        LIMIT 1
+    """)
+
+    row = cur.fetchone()
+
+    if not row:
+        return None
+
+    return {
+        "source_type": row[0],
+        "source_id": row[1],
+        "track_ids": row[2],
+        "original_order": row[3],
+        "shuffle_mode": row[4]
+    }
+
+
+def set_queue(cur, ids):
+
+    cur.execute("DELETE FROM playback_queue")
+
+    cur.executemany("""
+        INSERT INTO playback_queue (song_id, position)
+        VALUES (%s, %s)
+    """, [(sid, i) for i, sid in enumerate(ids)])
+
+    cur.execute("""
+        UPDATE playback_state
+        SET current_index = 0
+    """)
+
+
+def build_queue_response(ids):
+
+    if not ids:
+        return {
+            "current": None,
+            "queue": []
+        }
+
+    return {
+        "current": ids[0],
+        "queue": ids[1:]
+    }
+
+
+def update_queue_context(cur):
+
+    ids = get_queue_ids(cur)
+
+    ctx = get_latest_queue_context(cur)
+
+    if not ctx:
+        return
+
+    cur.execute("""
+        UPDATE queue_context
+        SET
+            track_ids = %s
+        WHERE id = (
+            SELECT id
+            FROM queue_context
+            ORDER BY created_at DESC
+            LIMIT 1
+        )
+    """, (
+        ids,
+    ))
+
+
 # =========================
 # queue取得
 # =========================
@@ -174,6 +286,22 @@ def play_song(song_id: int):
 
         set_index(cur, index)
 
+        if not get_latest_queue_context(cur):
+
+            ids = get_queue_ids(cur)
+
+            save_queue_context(
+                cur,
+                source_type="manual",
+                source_id=None,
+                track_ids=ids,
+                original_order=ids.copy(),
+                shuffle_mode=False
+            )
+
+        else:
+            update_queue_context(cur)
+
         conn.commit()
 
         return {"song_id": song_id}
@@ -193,7 +321,9 @@ def play_song(song_id: int):
 # =========================
 
 @router.post("/next")
-def next_song():
+def next_song(
+    ignore_repeat_one: bool =False
+):
 
     conn = get_connection()
     cur = conn.cursor()
@@ -207,7 +337,7 @@ def next_song():
             return {"current": None, "queue": []}
 
         # repeat one
-        if loop_mode == "one":
+        if loop_mode == "one" and not ignore_repeat_one:
             return {
                 "current": ids[current_index],
                 "queue": ids[current_index + 1:]
@@ -225,8 +355,8 @@ def next_song():
 
         # repeat all
         elif loop_mode == "all":
-            set_index(cur, 0)
             conn.commit()
+            return restart()
         else:
             return{"current": None, "queue": []}
         # 🔥 最後に統一して返す
@@ -301,9 +431,20 @@ def queue_from_recent(limit: int = 100):
 
         if not song_ids:
             return {"current": None, "queue": []}
+        
+        orginal_order = song_ids.copy()
 
         # 🔥 shuffle
         random.shuffle(song_ids)
+
+        save_queue_context(
+            cur,
+            source_type="recent",
+            source_id=None,
+            track_ids=song_ids,
+            original_order=orginal_order,
+            shuffle_mode=True
+        )
 
         # 🔥 queueリセット
         cur.execute("DELETE FROM playback_queue")
@@ -330,6 +471,7 @@ def queue_from_recent(limit: int = 100):
         cur.close()
         conn.close()
 
+
 @router.post("/from_songs")
 def queue_from_songs(shuffle: bool = False):
 
@@ -354,10 +496,19 @@ def queue_from_songs(shuffle: bool = False):
         if not song_ids:
             return {"current": None, "queue": []}
 
-        # 🔥 shuffle
+        original_order = song_ids.copy()
+
         if shuffle:
-            import random
             random.shuffle(song_ids)
+
+        save_queue_context(
+            cur,    
+            source_type="songs",
+            source_id=None,
+            track_ids=song_ids,
+            original_order=original_order,
+            shuffle_mode=shuffle
+        )
 
         # 🔥 queueリセット
         cur.execute("DELETE FROM playback_queue")
@@ -390,6 +541,7 @@ def queue_from_songs(shuffle: bool = False):
         cur.close()
         conn.close()
 
+
 # =========================
 # from_another
 # =========================
@@ -415,11 +567,12 @@ def queue_from_playlist(playlist_id: int, shuffle: bool = False):
         if not song_ids:
             return {"current": None, "queue": []}
 
-        # 🔥 shuffle
-        if shuffle:
-            import random
-            random.shuffle(song_ids)
+        orginal_order = song_ids.copy()
 
+        if shuffle:
+            random.shuffle(song_ids)
+        
+        
         # 🔥 queueリセット
         cur.execute("DELETE FROM playback_queue")
 
@@ -428,6 +581,16 @@ def queue_from_playlist(playlist_id: int, shuffle: bool = False):
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
         """, [(sid, i) for i, sid in enumerate(song_ids)])
+
+        save_queue_context(
+            cur,
+            source_type="playlist",
+            source_id=playlist_id,
+            track_ids=song_ids,
+            original_order=orginal_order,
+            shuffle_mode=shuffle
+        )
+
 
         # 🔥 current初期化
         cur.execute("""
@@ -451,6 +614,7 @@ def queue_from_playlist(playlist_id: int, shuffle: bool = False):
         cur.close()
         conn.close()
 
+
 @router.post("/from_album/{album_id}")
 def queue_from_album(album_id: int, shuffle: bool = True):
 
@@ -471,7 +635,8 @@ def queue_from_album(album_id: int, shuffle: bool = True):
         if not song_ids:
             return {"current": None, "queue": []}
 
-        # 🔥 shuffle
+        original_order = song_ids.copy()
+
         if shuffle:
             random.shuffle(song_ids)
 
@@ -482,6 +647,15 @@ def queue_from_album(album_id: int, shuffle: bool = True):
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
         """, [(sid, i) for i, sid in enumerate(song_ids)])
+
+        save_queue_context(
+            cur,
+            source_type="album",
+            source_id=album_id,
+            track_ids=song_ids,
+            original_order=original_order,
+            shuffle_mode=shuffle
+        )
 
         cur.execute("""
             UPDATE playback_state
@@ -531,7 +705,8 @@ def queue_from_artist(artist_id: int, shuffle: bool = False):
         if not song_ids:
             return {"current": None, "queue": []}
 
-        # 🔥 shuffleだけPython
+        original_order = song_ids.copy()
+
         if shuffle:
             random.shuffle(song_ids)
 
@@ -542,6 +717,15 @@ def queue_from_artist(artist_id: int, shuffle: bool = False):
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
         """, [(sid, i) for i, sid in enumerate(song_ids)])
+
+        save_queue_context(
+            cur,
+            source_type="artist",
+            source_id=artist_id,
+            track_ids=song_ids,
+            original_order=original_order,
+            shuffle_mode=shuffle
+        )
 
         cur.execute("""
             UPDATE playback_state
@@ -563,6 +747,7 @@ def queue_from_artist(artist_id: int, shuffle: bool = False):
     finally:
         cur.close()
         conn.close()
+
 
 @router.post("/from_genre/{genre_id}")
 def queue_from_genre(genre_id: int, shuffle: bool = False):
@@ -588,9 +773,10 @@ def queue_from_genre(genre_id: int, shuffle: bool = False):
 
         if not song_ids:
             return {"current": None, "queue": []}
+        
+        original_order = song_ids.copy()
 
         if shuffle:
-            import random
             random.shuffle(song_ids)
 
         cur.execute("DELETE FROM playback_queue")
@@ -599,6 +785,15 @@ def queue_from_genre(genre_id: int, shuffle: bool = False):
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
         """, [(sid, i) for i, sid in enumerate(song_ids)])
+        
+        save_queue_context(
+            cur,
+            source_type="genre",
+            source_id=genre_id,
+            track_ids=song_ids,
+            original_order=original_order,
+            shuffle_mode=shuffle
+        )
 
         cur.execute("""
             UPDATE playback_state
@@ -615,7 +810,8 @@ def queue_from_genre(genre_id: int, shuffle: bool = False):
     finally:
         cur.close()
         conn.close()
-        
+
+
 # =========================
 # shuffle（現在queue）
 # =========================
@@ -641,6 +837,8 @@ def shuffle_queue():
         new_ids = ids[:current_index + 1] + rest
 
         reset_queue(cur, new_ids)
+
+        update_queue_context(cur)
 
         conn.commit()
 
@@ -671,6 +869,7 @@ def reorder(ids: list[int] = Body(...)):
         new_ids = [current_id] + [i for i in ids if i != current_id]
 
         reset_queue(cur, new_ids)
+        update_queue_context(cur)
         set_index(cur, 0)
 
         conn.commit()
@@ -715,6 +914,29 @@ def set_mode(loop: str):
         cur.close()
         conn.close()
 
+@router.get("/mode")
+def get_mode():
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT loop_mode
+            FROM playback_state
+            WHERE id=1
+        """)
+
+        row = cur.fetchone()
+
+        return {
+            "loop": row[0] if row else "none"
+        }
+
+    finally:
+        cur.close()
+        conn.close()
+
 
 # =========================
 # add
@@ -737,6 +959,8 @@ def add_to_queue(song_id: int = Query(...)):
             INSERT INTO playback_queue (song_id, position)
             VALUES (%s, %s)
         """, (song_id, last + 1))
+
+        update_queue_context(cur)
 
         conn.commit()
 
@@ -813,6 +1037,8 @@ def add_next(song_id: int = Query(...)):
             WHERE playback_queue.id = sub.id
         """)
 
+        update_queue_context(cur)
+
         conn.commit()
 
         ids = get_queue_ids(cur)
@@ -826,4 +1052,40 @@ def add_next(song_id: int = Query(...)):
     finally:
         cur.close()
         conn.close()
+
+
+# =========================
+# repeat_all
+# =========================
+@router.post("/restart")
+def restart():
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+
+        ctx = get_latest_queue_context(cur)
+
+        if not ctx:
+            return {"current": None, "queue": []}
+
+        if ctx["shuffle_mode"]:
+            ids = ctx["track_ids"].copy()
+
+        else:
+            ids = ctx["track_ids"]
+
+        set_queue(cur, ids)
+
+        conn.commit()
+
+        return build_queue_response(ids)
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+
 

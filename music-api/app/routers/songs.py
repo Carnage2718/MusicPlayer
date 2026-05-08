@@ -218,17 +218,41 @@ def increment_play_count(song_id: int):
     cur = conn.cursor()
 
     try:
+
+        # play count
         cur.execute("""
         UPDATE songs
         SET play_count = play_count + 1
         WHERE id = %s
         """, (song_id,))
 
-        # 🔥 履歴にも追加したい場合
+        # 直前履歴確認
         cur.execute("""
-        INSERT INTO play_history (song_id)
-        VALUES (%s)
-        """, (song_id,))
+        SELECT song_id
+        FROM play_history
+        ORDER BY played_at DESC
+        LIMIT 1
+        """)
+
+        row = cur.fetchone()
+
+        # 同じ曲連続防止
+        if not row or row[0] != song_id:
+
+            cur.execute("""
+            INSERT INTO play_history (song_id)
+            VALUES (%s)
+            """, (song_id,))
+
+            cur.execute("""
+            DELETE FROM play_history
+            WHERE id NOT IN (
+                SELECT id
+                FROM play_history
+                ORDER BY played_at DESC
+                LIMIT 50
+            )
+            """)
 
         conn.commit()
 
