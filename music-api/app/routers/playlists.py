@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body, Query, Depends
 from app.database import get_connection
+from app.routers.auth import get_current_user
 from app.models import PlaylistCreate
 from app.utils.url import build_cover_url
 from app.utils.cover import (
@@ -15,7 +16,9 @@ router = APIRouter(prefix="/playlists", tags=["playlists"])
 # GET PLAYLISTS
 # =========================
 @router.get("")
-def get_playlists():
+def get_playlists(
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
@@ -27,10 +30,12 @@ def get_playlists():
             p.cover_url,
             COUNT(ps.song_id) as song_count
         FROM playlists p
-        LEFT JOIN playlist_songs ps ON ps.playlist_id = p.id
+        LEFT JOIN playlist_songs ps 
+            ON ps.playlist_id = p.id
+        WHERE p.user_id=%s
         GROUP BY p.id, p.name, p.cover_url
         ORDER BY p.id DESC
-    """)
+    """,(user,))
 
     rows = cur.fetchall()
 
@@ -52,7 +57,10 @@ def get_playlists():
 # CREATE PLAYLIST
 # =========================
 @router.post("")
-def create_playlist(data: PlaylistCreate):
+def create_playlist(
+    data: PlaylistCreate,
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
@@ -105,10 +113,11 @@ def create_playlist(data: PlaylistCreate):
     # =========================
 
     cur.execute("""
-        INSERT INTO playlists (name, description, cover_url)
-        VALUES (%s, %s, %s)
+        INSERT INTO playlists (user_id, name, description, cover_url)
+        VALUES (%s, %s, %s, %s)
         RETURNING id;
     """, (
+        user,
         data.name.strip(),
         (data.description or "").strip(),
         cover_url
@@ -122,9 +131,9 @@ def create_playlist(data: PlaylistCreate):
 
     for i, song_id in enumerate(song_ids, start=1):
         cur.execute("""
-            INSERT INTO playlist_songs (playlist_id, song_id, position)
-            VALUES (%s, %s, %s)
-        """, (playlist_id, song_id, i))
+            INSERT INTO playlist_songs (user_id, playlist_id, song_id, position)
+            VALUES (%s, %s, %s, %s)
+        """, (user, playlist_id, song_id, i))
 
     conn.commit()
     cur.close()
@@ -141,11 +150,15 @@ def create_playlist(data: PlaylistCreate):
 # DETAIL
 # =========================
 @router.get("/{playlist_id}")
-def get_playlist_detail(playlist_id: int):
+def get_playlist_detail(
+    playlist_id: int,
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
 
+    
     # =========================
     # PLAYLIST
     # =========================
@@ -153,7 +166,8 @@ def get_playlist_detail(playlist_id: int):
         SELECT id, name, cover_url, description
         FROM playlists
         WHERE id = %s
-    """, (playlist_id,))
+        AND user_id=%s
+    """, (playlist_id, user))
 
     playlist = cur.fetchone()
 
@@ -196,11 +210,11 @@ def get_playlist_detail(playlist_id: int):
         LEFT JOIN artists a ON a.id = sa.artist_id
 
         WHERE ps.playlist_id = %s
+        AND ps.user_id=%s
 
         GROUP BY s.id, ps.position
-
         ORDER BY ps.position
-    """, (playlist_id,))
+    """, (playlist_id, user))
 
     songs = cur.fetchall()
 
@@ -234,21 +248,35 @@ def get_playlist_detail(playlist_id: int):
 @router.post("/{playlist_id}/add")
 def add_song_to_playlist(
     playlist_id: int,
-    song_id: int = Query(...)
+    song_id: int = Query(...),
+    user=Depends(get_current_user)
 ):
 
     conn = get_connection()
     cur = conn.cursor()
 
     try:
+
+
         # =========================
         # 存在チェック
         # =========================
-        cur.execute("SELECT id FROM songs WHERE id = %s", (song_id,))
+        cur.execute("""
+            SELECT id 
+            FROM songs 
+            WHERE id = %s
+        """, (song_id,))
+
         if not cur.fetchone():
             return {"error": "Song not found"}
 
-        cur.execute("SELECT id FROM playlists WHERE id = %s", (playlist_id,))
+        cur.execute("""
+            SELECT id 
+            FROM playlists 
+            WHERE id = %s
+            AND user_id=%s
+        """, (playlist_id,))
+
         if not cur.fetchone():
             return {"error": "Playlist not found"}
 
@@ -256,9 +284,12 @@ def add_song_to_playlist(
         # すでに入ってるか（任意）
         # =========================
         cur.execute("""
-            SELECT 1 FROM playlist_songs
-            WHERE playlist_id = %s AND song_id = %s
-        """, (playlist_id, song_id))
+            SELECT 1 
+            FROM playlist_songs
+            WHERE playlist_id = %s 
+            AND user_id=%s
+            AND song_id = %s
+        """, (playlist_id, user, song_id))
 
         if cur.fetchone():
             return {"message": "Already exists"}
@@ -270,7 +301,8 @@ def add_song_to_playlist(
             SELECT COALESCE(MAX(position), 0)
             FROM playlist_songs
             WHERE playlist_id = %s
-        """, (playlist_id,))
+            AND user_id=%s
+        """, (playlist_id, user))
 
         max_pos = cur.fetchone()[0]
 
@@ -278,9 +310,9 @@ def add_song_to_playlist(
         # INSERT
         # =========================
         cur.execute("""
-            INSERT INTO playlist_songs (playlist_id, song_id, position)
-            VALUES (%s, %s, %s)
-        """, (playlist_id, song_id, max_pos + 1))
+            INSERT INTO playlist_songs (user_id, playlist_id, song_id, position)
+            VALUES (%s, %s, %s, %s)
+        """, (user, playlist_id, song_id, max_pos + 1))
 
         conn.commit()
 
@@ -303,7 +335,11 @@ def add_song_to_playlist(
 # REORDER
 # =========================
 @router.put("/{playlist_id}/reorder")
-def reorder_playlist(playlist_id: int, song_orders: list[int] = Body(...)):
+def reorder_playlist(
+    playlist_id: int, 
+    song_orders: list[int] = Body(...),
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
@@ -312,8 +348,10 @@ def reorder_playlist(playlist_id: int, song_orders: list[int] = Body(...)):
         cur.execute("""
             UPDATE playlist_songs
             SET position = %s
-            WHERE playlist_id = %s AND song_id = %s;
-        """, (position, playlist_id, song_id))
+            WHERE playlist_id = %s 
+            AND user_id=%s
+            AND song_id = %s
+        """, (position, playlist_id, user, song_id))
 
     conn.commit()
     cur.close()
@@ -326,7 +364,10 @@ def reorder_playlist(playlist_id: int, song_orders: list[int] = Body(...)):
 # SEARCH
 # =========================
 @router.get("/search")
-def search_playlists(q: str = ""):
+def search_playlists(
+    q: str = "",
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
@@ -337,9 +378,10 @@ def search_playlists(q: str = ""):
         SELECT id, name, cover_url
         FROM playlists
         WHERE name ILIKE %s
+        AND user_id=%s
         ORDER BY name ASC
         LIMIT 50
-    """, (search,))
+    """, (search, user))
 
     rows = cur.fetchall()
 
@@ -363,7 +405,8 @@ def search_playlists(q: str = ""):
 @router.delete("/{playlist_id}/remove")
 def remove_song(
     playlist_id: int,
-    song_id: int = Query(...)
+    song_id: int = Query(...),
+    user=Depends(get_current_user)
 ):
 
     conn = get_connection()
@@ -376,8 +419,10 @@ def remove_song(
         cur.execute("""
             SELECT position
             FROM playlist_songs
-            WHERE playlist_id = %s AND song_id = %s
-        """, (playlist_id, song_id))
+            WHERE playlist_id = %s 
+            AND user_id=%s
+            AND song_id = %s
+        """, (playlist_id, user, song_id))
 
         row = cur.fetchone()
 
@@ -391,8 +436,10 @@ def remove_song(
         # =========================
         cur.execute("""
             DELETE FROM playlist_songs
-            WHERE playlist_id = %s AND song_id = %s
-        """, (playlist_id, song_id))
+            WHERE playlist_id = %s 
+            AND user_id=%s
+            AND song_id = %s
+        """, (playlist_id, user, song_id))
 
         # =========================
         # ③ 詰める（超重要）
@@ -401,8 +448,9 @@ def remove_song(
             UPDATE playlist_songs
             SET position = position - 1
             WHERE playlist_id = %s
-              AND position > %s
-        """, (playlist_id, removed_position))
+            AND user_id=%s
+            AND position > %s
+        """, (playlist_id, user, removed_position))
 
         conn.commit()
 

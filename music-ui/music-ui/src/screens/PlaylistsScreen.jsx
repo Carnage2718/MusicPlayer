@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react"
-import API_BASE from "../api"
+import API_BASE, {authfetch} from "../api"
 import PlaylistCard from "../components/PlaylistCard"
 import AppHeader from "../components/AppHeader"
 import "./PlaylistsScreen.css"
@@ -13,7 +13,7 @@ export default function PlaylistsScreen({
 
   useEffect(()=>{
     const load = async()=>{
-      const res = await fetch(`${API_BASE}/playlists`)
+      const res = await authfetch(`/playlists`)
       const data = await res.json()
       setPlaylists(data)
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import API_BASE from "../api"
+import API_BASE, { authfetch } from "../api"
 import "./MenuComponent.css"
 
 export default function SongMenu({
@@ -16,7 +16,7 @@ export default function SongMenu({
   const [album, setAlbum] = useState(null)
 
   const loadPlaylists = async () => {
-    const res = await fetch(`${API_BASE}/playlists`)
+    const res = await authfetch(`/playlists`)
     const data = await res.json()
     setPlaylists(data)
   }
@@ -24,7 +24,7 @@ export default function SongMenu({
   const loadAlbum = async () => {
 
     try {
-      const res = await fetch(`${API_BASE}/songs/${song.id}`)
+      const res = await authfetch(`/songs/${song.id}`)
       const data = await res.json()
 
       setAlbum({
@@ -61,7 +61,7 @@ export default function SongMenu({
 
 
   const addQueue = async () => {
-    const res = await fetch(`${API_BASE}/queue/add?song_id=${song.id}`, { 
+    const res = await authfetch(`/queue/add?song_id=${song.id}`, { 
       method:"POST" 
     })
 
@@ -73,7 +73,7 @@ export default function SongMenu({
   }
 
   const addNext = async () => {
-    const res = await fetch(`${API_BASE}/queue/add_next?song_id=${song.id}`, { 
+    const res = await authfetch(`/queue/add_next?song_id=${song.id}`, { 
       method:"POST" 
     })
 
@@ -85,7 +85,7 @@ export default function SongMenu({
 
   const loadIncludedPlaylists = async () => {
     try {
-      const res = await fetch(`${API_BASE}/songs/${song.id}/playlists`)
+      const res = await authfetch(`/songs/${song.id}/playlists`)
       const data = await res.json()
       setIncludedPlaylists(data.map(p => p.id))
     } catch (e) {
@@ -117,7 +117,7 @@ export default function SongMenu({
 
       if (isAdded) {
         // 🔥 削除
-        await fetch(`${API_BASE}/playlists/${playlistId}/remove?song_id=${song.id}`, {
+        await authfetch(`/playlists/${playlistId}/remove?song_id=${song.id}`, {
           method: "DELETE"
         })
 
@@ -127,7 +127,7 @@ export default function SongMenu({
 
       } else {
         // 🔥 追加
-        await fetch(`${API_BASE}/playlists/${playlistId}/add?song_id=${song.id}`, {
+        await authfetch(`/playlists/${playlistId}/add?song_id=${song.id}`, {
           method: "POST"
         })
 

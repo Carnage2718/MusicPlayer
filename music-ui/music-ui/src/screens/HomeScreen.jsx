@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from "react"
 import { useSongs } from "../context/SongsContext"
 import { Play, Music } from "lucide-react"
-import API_BASE from "../api"
+import API_BASE, { authfetch }from "../api"
 import "./HomeScreen.css"
 import AppHeader from "../components/AppHeader"
 import TextScroller from "../components/TextScroller"
@@ -33,7 +33,7 @@ export default function HomeScreen({
     let mounted = true
 
     const load = async () => {
-      const res = await fetch(`${API_BASE}/home`)
+      const res = await authfetch(`/home`)
       const d = await res.json()
 
       if (!mounted) return
@@ -186,34 +186,37 @@ export default function HomeScreen({
         </div>
 
         {/* CONTINUE */}
-        <section className="home-section">
+        {data.recent?.length > 0 && (
 
-          <div className="section-title">
-            Continue Listening
-          </div>
+          <section className="home-section">
 
-          <div className="horizontal-scroll">
+            <div className="section-title">
+              Continue Listening
+            </div>
 
-            {data.recent.map(song => (
+            <div className="horizontal-scroll">
 
-              <StationCard
-                key={`${song.song_id}-${song.title}`}
-                title={song.title}
-                artists={song.artists}
-                image={song.image}
-                onClick={() => onSelectSong({ id: song.song_id })}
-                onArtistClick={(artist) => openArtist({
-                  id: artist.id,
-                  name: artist.name
-                })}
-              />
+              {data.recent.map(song => (
 
-            ))}
+                <StationCard
+                  key={`${song.song_id}-${song.title}`}
+                  title={song.title}
+                  artists={song.artists}
+                  image={song.image}
+                  onClick={() => onSelectSong({ id: song.song_id })}
+                  onArtistClick={(artist) => openArtist({
+                    id: artist.id,
+                    name: artist.name
+                  })}
+                />
 
-          </div>
+              ))}
 
-        </section>
+            </div>
 
+          </section>
+
+        )}
         {/* TRENDING */}
         <section className="home-section">
 

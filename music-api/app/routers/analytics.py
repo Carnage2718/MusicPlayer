@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from app.database import get_connection
+from app.routers.auth import get_current_user
 from app.utils.url import build_cover_url
 
 router = APIRouter(tags=["analytics"])
@@ -51,29 +52,59 @@ def popular_songs(days: int = 30):
 
 
 @router.get("/history")
-def recent_history(limit: int = 50):
-
+def recent_history(
+    limit: int = 50,
+    user=Depends(get_current_user)
+):
+    
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT
-            s.id,
-            s.title,
-            STRING_AGG(DISTINCT a.name, ', ') AS artist,
-            s.cover_url,
-            ph.played_at
-        FROM play_history ph
-        JOIN songs s
-            ON ph.song_id = s.id
-        LEFT JOIN song_artists sa
-            ON s.id = sa.song_id
-        LEFT JOIN artists a
-            ON sa.artist_id = a.id
-        GROUP BY s.id, s.title, s.cover_url, ph.played_at
-        ORDER BY ph.played_at DESC
-        LIMIT %s
-    """, (limit,))
+        SELECT *
+        FROM (
+            SELECT
+                s.id,
+                s.title,
+                s.cover_url,
+                ph.played_at,
+
+                COALESCE(
+                    JSON_AGG(
+                        JSON_BUILD_OBJECT(
+                            'id', a.id,
+                            'name', a.name,
+                            'role', LOWER(sa.role)
+                        )
+                    ) FILTER (WHERE a.id IS NOT NULL),
+                    '[]'
+                ) AS artists
+
+            FROM play_history ph
+
+            JOIN songs s
+                ON ph.song_id = s.id
+
+            LEFT JOIN song_artists sa
+                ON s.id = sa.song_id
+
+            LEFT JOIN artists a
+                ON sa.artist_id = a.id
+
+            WHERE ph.user_id=%s
+
+            GROUP BY
+                s.id,
+                s.title,
+                s.cover_url,
+                ph.played_at
+
+            ORDER BY ph.played_at DESC
+            LIMIT %s
+        ) recent
+
+        ORDER BY played_at ASC
+    """, (user, limit))
 
     rows = cur.fetchall()
 
@@ -84,24 +115,28 @@ def recent_history(limit: int = 50):
         {
             "song_id": r[0],
             "title": r[1],
-            "artist": r[2],
-            "image": build_cover_url(r[3]),
-            "played_at": r[4]
+            "image": build_cover_url(r[2]),
+            "played_at": r[3],
+            "artists":r[4]
         }
         for r in rows
     ]
 
 
 @router.post("/songs/history/add")
-def add_history(song_id:int):
+def add_history(
+    song_id:int,
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
 
+
     cur.execute("""
-        INSERT INTO play_history (song_id)
-        VALUES (%s)
-    """,(song_id,))
+        INSERT INTO play_history (user_id, song_id)
+        VALUES (%s, %s)
+    """,(user, song_id))
 
     conn.commit()
 
@@ -453,13 +488,14 @@ def multi_month_snapshot(dates: str):
 
 
 @router.get("/home")
-def get_home():
+def get_home(
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
 
     try:
-
         # =====================
         # recent
         # =====================
@@ -470,11 +506,13 @@ def get_home():
             s.title,
             s.cover_url
         FROM play_history ph
-        JOIN songs s ON ph.song_id = s.id
+        JOIN songs s
+            ON ph.song_id = s.id
+        WHERE ph.user_id=%s
         GROUP BY s.id, s.title, s.cover_url
         ORDER BY MAX(ph.played_at) DESC
         LIMIT 10
-        """)
+        """,(user,))
 
         rows = cur.fetchall()
 
@@ -634,180 +672,6 @@ def get_home():
             "trending": trending,
             "artists": artists,
             "albums": albums
-        }
-
-    finally:
-        cur.close()
-        conn.close()
-
-
-@router.get("/init")
-def init_data():
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    try:
-
-        # songs
-
-        cur.execute("""
-        SELECT
-            s.id,
-            s.title,
-            s.cover_url,
-            STRING_AGG(a.name, ', ') AS artist
-        FROM songs s
-        LEFT JOIN song_artists sa ON s.id = sa.song_id
-        LEFT JOIN artists a ON sa.artist_id = a.id
-        GROUP BY s.id,s.title,s.cover_url
-        """)
-
-        songs = [
-            {
-                "song_id": r[0],
-                "title": r[1],
-                "image": build_cover_url(r[2]),
-                "artist": r[3]
-            }
-            for r in cur.fetchall()
-        ]
-
-
-        # queue
-
-        cur.execute("""
-        SELECT
-            q.song_id,
-            q.position
-        FROM playback_queue q
-        ORDER BY position
-        """)
-
-        queue = [
-            {
-                "song_id": r[0],
-                "position": r[1]
-            }
-            for r in cur.fetchall()
-        ]
-
-
-        # current
-
-        cur.execute("""
-        SELECT song_id
-        FROM playback_queue
-        WHERE is_current = true
-        LIMIT 1
-        """)
-
-        row = cur.fetchone()
-
-        current = row[0] if row else None
-
-
-        return {
-            "songs": songs,
-            "queue": queue,
-            "current": current
-        }
-
-    finally:
-
-        cur.close()
-        conn.close()
-
-def create_queue(cur, song_ids, reset=False):
-
-    if reset:
-        # 全削除（shuffleなど）
-        cur.execute("DELETE FROM playback_queue")
-
-        for i, song_id in enumerate(song_ids, start=1):
-            cur.execute("""
-            INSERT INTO playback_queue(song_id, position, is_current)
-            VALUES(%s,%s,%s)
-            """, (song_id, i, i == 1))
-
-        return
-
-    # ===== 既存queueの最後position取得 =====
-    cur.execute("""
-    SELECT COALESCE(MAX(position), 0) FROM playback_queue
-    """)
-    offset = cur.fetchone()[0]
-
-    # ===== current存在チェック =====
-    cur.execute("""
-    SELECT COUNT(*) FROM playback_queue WHERE is_current = true
-    """)
-    has_current = cur.fetchone()[0] > 0
-
-    # ===== 追加 =====
-    for i, song_id in enumerate(song_ids, start=1):
-        cur.execute("""
-        INSERT INTO playback_queue(song_id, position, is_current)
-        VALUES(%s,%s,%s)
-        """, (
-            song_id,
-            offset + i,
-            False if has_current else (i == 1)
-        ))
-
-@router.post("/songs/shuffle")
-def shuffle_queue():
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    try:
-        cur.execute("""
-        SELECT id
-        FROM songs
-        ORDER BY RANDOM()
-        LIMIT 50
-        """)
-
-        rows = cur.fetchall()
-        song_ids = [r[0] for r in rows]
-
-        create_queue(cur, song_ids, reset=True)
-
-        conn.commit()
-
-        return {
-            "song_id": song_ids[0]
-        }
-
-    finally:
-        cur.close()
-        conn.close()
-        
-@router.post("/songs/shuffle/{limit}")
-def shuffle_queue_limit(limit: int):
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    try:
-        cur.execute("""
-        SELECT id
-        FROM songs
-        ORDER BY RANDOM()
-        LIMIT %s
-        """, (limit,))
-
-        rows = cur.fetchall()
-        song_ids = [r[0] for r in rows]
-
-        create_queue(cur, song_ids, reset=True)
-
-        conn.commit()
-
-        return {
-            "song_id": song_ids[0],
-            "total": len(song_ids)
         }
 
     finally:

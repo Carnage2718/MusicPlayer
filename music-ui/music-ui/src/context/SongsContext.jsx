@@ -1,19 +1,36 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react"
-import API_BASE from "../api"
+import API_BASE, {
+  authfetch
+} from "../api"
 
 const SongsContext = createContext()
 
+
 export function SongsProvider({ children }) {
+
+  const userId =
+    localStorage.getItem("user_id")
+
+  const HOME_CACHE_KEY =
+    `homeCache_${userId}`
+
   const [homeData, setHomeData] = useState(() => {
     try {
-      const saved = localStorage.getItem("homeCache")
-      return saved ? JSON.parse(saved) : null
+      const saved =
+        localStorage.getItem(HOME_CACHE_KEY)
+      return saved
+        ? JSON.parse(saved)
+        : null
     } catch {
+
       return null
+
     }
+
   })
   const audioRef = useRef(null)
   const [currentId, setCurrentId] = useState(null)
+  const currentIdRef = useRef(null)
   const countedRef = useRef(false)
   const [queueIds, setQueueIds] = useState([])
   const [current, setCurrent] = useState(null)
@@ -44,15 +61,28 @@ export function SongsProvider({ children }) {
      HomeCache
   ========================= */
   useEffect(() => {
+
+    if (!HOME_CACHE_KEY) return
+
     if (homeData) {
-      localStorage.setItem("homeCache", JSON.stringify(homeData))
+
+      localStorage.setItem(
+        HOME_CACHE_KEY,
+        JSON.stringify(homeData)
+      )
+
     }
-  }, [homeData])
+
+  }, [homeData, HOME_CACHE_KEY])
 
   useEffect(() => {
 
     const handler = () => {
+
+      localStorage.removeItem(HOME_CACHE_KEY)
+
       setHomeData(null)
+
     }
 
     window.addEventListener("homeUpdated", handler)
@@ -71,7 +101,7 @@ export function SongsProvider({ children }) {
 
     try {
 
-      const res = await fetch(`${API_BASE}/history`)
+      const res = await authfetch("/history")
       const data = await res.json()
 
       setHistoryMeta(data)
@@ -106,7 +136,7 @@ export function SongsProvider({ children }) {
   ========================= */
 
   useEffect(() => {
-    fetch(`${API_BASE}/queue`)
+    authfetch("/queue")
       .then(res => res.json())
       .then(applyQueue)
   }, [])
@@ -119,7 +149,7 @@ export function SongsProvider({ children }) {
 
     if (songCache.current[id]) return songCache.current[id]
 
-    const res = await fetch(`${API_BASE}/songs/${id}`)
+    const res = await authfetch(`/songs/${id}`)
     const data = await res.json()
 
     const song = {
@@ -141,7 +171,7 @@ export function SongsProvider({ children }) {
     try {
       if (streamCache.current[id]) return streamCache.current[id]
 
-      const res = await fetch(`${API_BASE}/songs/${id}/stream`)
+      const res = await authfetch(`/songs/${id}/stream`)
       if (!res.ok) throw new Error()
 
       const data = await res.json()
@@ -178,7 +208,7 @@ export function SongsProvider({ children }) {
         stream = await getStream(id)
       }
 
-      if (cancelled || id !== currentId) return // 🔥 追加
+      if (cancelled || id !== currentIdRef.current) return
 
       const song = { ...meta, url: stream }
       setCurrent(song)
@@ -186,12 +216,39 @@ export function SongsProvider({ children }) {
       const audio = audioRef.current
 
       if (audio.src !== stream) {
+
         audio.src = stream
         audio.load()
+
+        await new Promise((resolve) => {
+
+          if (audio.readyState >= 3) {
+            resolve()
+            return
+          }
+
+          const handler = () => {
+            audio.removeEventListener("canplay", handler)
+            resolve()
+          }
+
+          audio.addEventListener("canplay", handler)
+
+          if (cancelled) {
+            audio.removeEventListener("canplay", handler)
+          }
+
+        })
+        
       }
 
-      if (userInteracted.current || isPlaying){
-        audio.play().catch(()=>{})
+      if (userInteracted.current) {
+
+        try {
+          await audio.play()
+        } catch (e) {
+          console.error(e)
+        }
       }
     }
 
@@ -330,10 +387,8 @@ export function SongsProvider({ children }) {
     ignoreRepeatOne = false
   } = {}) => {
 
-    const before = currentId
-
-    const res = await fetch(
-      `${API_BASE}/queue/next?ignore_repeat_one=${ignoreRepeatOne}`, 
+    const res = await authfetch(
+      `/queue/next?ignore_repeat_one=${ignoreRepeatOne}`, 
       {
         method: "POST"
       }
@@ -341,27 +396,26 @@ export function SongsProvider({ children }) {
 
     const data = await res.json()
 
-    applyQueue(data)
 
-    // repeat one
-    if (data.current === before) {
+    if (data.restart) {
 
       const audio = audioRef.current
 
-      if (audio) {
-        audio.currentTime = 0
+      audio.currentTime = 0
 
-        try {
-          await audio.play()
-        } catch {}
-      }
+      try {
+        await audio.play()
+      } catch {}
 
       setIsPlaying(true)
 
       return
     }
 
+    applyQueue(data)
+
     setIsPlaying(!!data.current)
+
   }
 
 
@@ -371,7 +425,7 @@ export function SongsProvider({ children }) {
 
   const prevSong = async () => {
 
-    const res = await fetch(`${API_BASE}/queue/previous`, {
+    const res = await authfetch("/queue/previous", {
       method: "POST"
     })
 
@@ -391,28 +445,16 @@ export function SongsProvider({ children }) {
 
     userInteracted.current = true
 
-    const audio = audioRef.current
+    const data = await authfetch(
+      `/queue/play/${id}`,
+      {
+        method: "POST"
+      }
+    ).then(r => r.json())
 
-    let stream = await getStream(id)
+    applyQueue(data)
 
-    if (!stream) return
-
-    audio.src = stream
-
-    try {
-      await audio.play() // 🔥 ここが最重要
-    } catch (e) {
-      console.warn("play blocked", e)
-    }
-
-    setCurrentId(id)
     setIsPlaying(true)
-
-    await fetch(`${API_BASE}/queue/play/${id}`, {
-      method: "POST"
-    })
-      .then(res => res.json())
-      .then(applyQueue)
   }
 
   /* =========================
@@ -421,7 +463,7 @@ export function SongsProvider({ children }) {
 
   const shuffleQueue = async () => {
 
-    const res = await fetch(`${API_BASE}/queue/shuffle`, {
+    const res = await authfetch("/queue/shuffle", {
       method: "POST"
     })
 
@@ -458,11 +500,11 @@ export function SongsProvider({ children }) {
     const ended = async () => {
 
       // 50%以上再生済みならhistory追加
-      if (countedRef.current && currentId) {
+      if (countedRef.current && currentIdRef.current) {
 
         try {
 
-          await fetch(`${API_BASE}/songs/${currentId}/play`, {
+          await authfetch(`/songs/${currentIdRef.current}/play`, {
             method: "POST"
           })
 
@@ -473,13 +515,15 @@ export function SongsProvider({ children }) {
         }
       }
 
+      countedRef.current = false
+
       await nextSong()
     }
 
     audio.addEventListener("ended", ended)
     return () => audio.removeEventListener("ended", ended)
 
-  }, [current])
+  }, [])
 
 
   const changeRepeatMode = async (mode) => {
@@ -488,7 +532,7 @@ export function SongsProvider({ children }) {
 
     try {
 
-      await fetch(`${API_BASE}/queue/mode?loop=${mode}`, {
+      await authfetch(`/queue/mode?loop=${mode}`, {
         method: "POST"
       })
 
@@ -498,10 +542,13 @@ export function SongsProvider({ children }) {
   }
 
 
+  useEffect(() =>{
+    currentIdRef.current = currentId
+  }, [currentId])
 
 
   /* =========================
-     Queue From 
+     Play From 
   ========================= */
 
   const playFrom = async (endpoint) => {
@@ -513,23 +560,18 @@ export function SongsProvider({ children }) {
 
       userInteracted.current = true
 
-      const res = await fetch(endpoint, { method: "POST" })
+      const res = await authfetch(
+        endpoint.replace(API_BASE,""),
+        { 
+          method: "POST" 
+        }
+      )
       const data = await res.json()
 
       const firstId = data.current
       if (!firstId) return
 
-      const stream = await getStream(firstId)
-      if (!stream) return
-
-      const audio = audioRef.current
-      audio.src = stream
-
       applyQueue(data)
-
-      setCurrentId(firstId)
-
-      await audio.play()
 
       setIsPlaying(true)
 
@@ -620,7 +662,7 @@ export function SongsProvider({ children }) {
 
   useEffect(() => {
 
-    fetch(`${API_BASE}/queue/mode`)
+    authfetch(`/queue/mode`)
       .then(r => r.json())
       .then(data => {
         setRepeatMode(data.loop)

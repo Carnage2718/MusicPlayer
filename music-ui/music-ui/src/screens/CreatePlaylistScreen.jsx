@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import API_BASE from "../api"
+import API_BASE, { authfetch }from "../api"
 import AppHeader from "../components/AppHeader"
 import "./CreatePlaylistScreen.css"
 import { Music } from "lucide-react"
@@ -247,7 +247,7 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
         uploaded = data.url
       }
 
-      await fetch(`${API_BASE}/playlists`,{
+      await authfetch(`/playlists`,{
         method:"POST",
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({

@@ -3,7 +3,7 @@ import { Play, Shuffle, GripVertical } from "lucide-react"
 import AppHeader from "../components/AppHeader"
 import "./PlaylistScreen.css"
 import SongCard from "../components/SongCard"
-import API_BASE from "../api"
+import API_BASE, {authfetch} from "../api"
 import { useSongs } from "../context/SongsContext"
 
 export default function PlaylistScreen({
@@ -41,7 +41,7 @@ export default function PlaylistScreen({
 
     const fetchPlaylist = async ()=>{
       try{
-        const res = await fetch(`${API_BASE}/playlists/${playlist.id}`)
+        const res = await authfetch(`/playlists/${playlist.id}`)
         const data = await res.json()
 
         setTracks(data.songs || [])
@@ -169,11 +169,11 @@ export default function PlaylistScreen({
     setIsAdding(true)
 
     try{
-      await fetch(`${API_BASE}/playlists/${playlist.id}/add?song_id=${songId}`,{
+      await authfetch(`/playlists/${playlist.id}/add?song_id=${songId}`,{
         method:"POST"
       })
 
-      const res = await fetch(`${API_BASE}/playlists/${playlist.id}`)
+      const res = await authfetch(`/playlists/${playlist.id}`)
       const data = await res.json()
       setTracks(data.songs || [])
 
@@ -189,7 +189,7 @@ export default function PlaylistScreen({
   }
 
   const searchSongs = async (q)=>{
-    const res = await fetch(`${API_BASE}/search/song?q=${q}`)
+    const res = await authfetch(`/search/song?q=${q}`)
     const data = await res.json()
     setSearchResults(data)
   }
@@ -198,11 +198,11 @@ export default function PlaylistScreen({
      DELETE SONG
   ========================= */
   const removeFromPlaylist = async (songId)=>{
-    await fetch(`${API_BASE}/playlists/${playlist.id}/remove?song_id=${songId}`,{
+    await authfetch(`/playlists/${playlist.id}/remove?song_id=${songId}`,{
       method:"DELETE"
     })
 
-    const res = await fetch(`${API_BASE}/playlists/${playlist.id}`)
+    const res = await authfetch(`/playlists/${playlist.id}`)
     const data = await res.json()
     setTracks(data.songs || [])
 
@@ -223,7 +223,7 @@ export default function PlaylistScreen({
     setTracks(updated)
 
     // 🔥 保存
-    await fetch(`${API_BASE}/playlists/${playlist.id}/reorder`, {
+    await authfetch(`/playlists/${playlist.id}/reorder`, {
       method:"PUT",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify(updated.map(t=>t.id))

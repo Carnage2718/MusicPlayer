@@ -10,4 +10,29 @@
 
 
 const API_BASE = "https://musicplayer-api-1ex5.onrender.com"
+
 export default API_BASE
+
+export const authfetch = (
+  endpoint,
+  options={}
+) => {
+
+  const token =
+    localStorage.getItem("token")
+
+  return fetch(
+    `${API_BASE}${endpoint}`,
+    {
+      ...options,
+
+      headers:{
+        "Content-Type":"application/json",
+
+        ...(options.headers || {}),
+
+        Authorization:`Bearer ${token}`
+      }
+    }
+  )
+}

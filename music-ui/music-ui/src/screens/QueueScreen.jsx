@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, useEffect } from "react"
-import API_BASE from "../api"
+import API_BASE, { authfetch } from "../api"
 
 import {
   Shuffle,
@@ -119,7 +119,7 @@ export default function QueueScreen({
     const [moved] = newQueue.splice(fromIndex, 1)
     newQueue.splice(toIndex, 0, moved)
 
-    fetch(`${API_BASE}/queue/reorder`, {
+    authfetch(`/queue/reorder`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newQueue.map(s => s.song_id))

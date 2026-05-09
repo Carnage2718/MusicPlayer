@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 import boto3, os
 from botocore.client import Config
 from app.database import get_connection
+from app.routers.auth import get_current_user
 from app.models import GenreUpdate
 from app.utils.url import build_cover_url  # 🔥 追加
 
@@ -72,6 +73,37 @@ def list_songs():
         for r in rows
     ]
 
+
+@router.get("/limit/100")
+def list_songs():
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            s.cover_url
+        FROM songs s
+        WHERE
+            s.cover_url IS NOT NULL
+            AND s.cover_url <> ''
+        ORDER BY RANDOM()
+        LIMIT 100
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return [
+        {
+            "image": build_cover_url(r[0])
+        }
+        for r in rows
+    ]
+
+
 @router.get("/recent")
 def list_recent_songs(limit: int = 50):
 
@@ -124,6 +156,7 @@ def list_recent_songs(limit: int = 50):
         }
         for r in rows
     ]
+
 
 @router.get("/{song_id}")
 def get_song_detail(song_id: int):
@@ -212,13 +245,15 @@ def stream_song(song_id: int):
     }
 
 @router.post("/{song_id}/play")
-def increment_play_count(song_id: int):
+def increment_play_count(
+    song_id: int,
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
 
     try:
-
         # play count
         cur.execute("""
         UPDATE songs
@@ -230,9 +265,10 @@ def increment_play_count(song_id: int):
         cur.execute("""
         SELECT song_id
         FROM play_history
+        WHERE user_id=%s
         ORDER BY played_at DESC
         LIMIT 1
-        """)
+        """,(user, ))
 
         row = cur.fetchone()
 
@@ -240,19 +276,21 @@ def increment_play_count(song_id: int):
         if not row or row[0] != song_id:
 
             cur.execute("""
-            INSERT INTO play_history (song_id)
-            VALUES (%s)
-            """, (song_id,))
+            INSERT INTO play_history (user_id, song_id)
+            VALUES (%s, %s)
+            """, (user, song_id,))
 
             cur.execute("""
             DELETE FROM play_history
-            WHERE id NOT IN (
+            WHERE user_id=%s
+            AND id NOT IN (
                 SELECT id
                 FROM play_history
+                WHERE user_id=%s
                 ORDER BY played_at DESC
                 LIMIT 50
             )
-            """)
+            """,(user, user))
 
         conn.commit()
 

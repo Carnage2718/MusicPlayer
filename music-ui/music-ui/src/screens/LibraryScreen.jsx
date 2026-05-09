@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import API_BASE from "../api"
+import API_BASE, { authfetch } from "../api"
 import SongCard from "../components/SongCard"
 import AppHeader from "../components/AppHeader"
 import "./LibraryScreen.css"
@@ -21,7 +21,7 @@ export default function LibraryScreen({
        Recently Played
     ========================= */
 
-    fetch(`${API_BASE}/history?limit=8`)
+    authfetch(`/history?limit=8`)
       .then(res => res.json())
       .then(data => setRecent(data))
       .catch(err => console.error("history fetch error", err))
@@ -100,7 +100,7 @@ export default function LibraryScreen({
           {recent.map(song => (
 
             <SongCard
-              key={`{song.song_id}-${song.played_at}`}
+              key={`${song.song_id}-${song.played_at}`}
               song={{
                 id: song.song_id,
                 title: song.title,

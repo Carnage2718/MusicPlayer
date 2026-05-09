@@ -67,3 +67,9 @@ npm run dev -- --host
 git add .
 git commit -m ""
 git push
+
+
+>>log out
+localStorage.removeItem("token")
+localStorage.removeItem("user_id")
+location.reload()

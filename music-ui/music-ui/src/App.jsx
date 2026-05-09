@@ -19,6 +19,7 @@ import AlbumsScreen from "./screens/AlbumsScreen"
 import AlbumScreen from "./screens/AlbumScreen"
 import CreateAlbumScreen from "./screens/CreateAlbumScreen"
 import GenreScreen from "./screens/GenreScreen"
+import LoginScreen from "./screens/LoginScreen"
 
 import MiniPlayer from "./components/MiniPlayer"
 import BottomNav from "./components/BottomNav"
@@ -292,6 +293,13 @@ function AppContent() {
 }
 
 export default function App() {
+  const token =
+  localStorage.getItem("token")
+
+  if(!token){
+    return <LoginScreen/>
+  }
+
   return (
     <SongsProvider>
       <MenuProvider>

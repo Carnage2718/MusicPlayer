@@ -1,98 +1,183 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import "./LoginScreen.css"
+import API_BASE from "../api"
 
 export default function LoginScreen(){
 
-  const canvasRef = useRef(null)
-
   const [id,setId] = useState("")
   const [pass,setPass] = useState("")
+  const [covers,setCovers] = useState([])
 
   // =========================
-  // 球体アニメーション
+  // COVER LOAD
   // =========================
+
   useEffect(()=>{
 
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext("2d")
+    const load = async ()=>{
 
-    let w,h
-    const resize = ()=>{
-      w = canvas.width = window.innerWidth
-      h = canvas.height = window.innerHeight
-    }
-    resize()
-    window.addEventListener("resize",resize)
+      try{
 
-    // cover画像ダミー（実際はAPIから取得でもOK）
-    const covers = []
-    for(let i=0;i<40;i++){
-      const img = new Image()
-      img.src = `https://picsum.photos/200?random=${i}`
-      covers.push(img)
-    }
-
-    let angle = 0
-
-    const render = ()=>{
-      ctx.clearRect(0,0,w,h)
-
-      const cx = w/2
-      const cy = h/2 - 80
-      const radius = 180
-
-      angle += 0.003
-
-      covers.forEach((img,i)=>{
-
-        const a = (i / covers.length) * Math.PI * 2 + angle
-        const x = cx + Math.cos(a) * radius
-        const y = cy + Math.sin(a) * radius * 0.5
-
-        const scale = (Math.sin(a)+1)/2 * 0.6 + 0.4
-        const size = 60 * scale
-
-        ctx.globalAlpha = scale
-
-        ctx.drawImage(
-          img,
-          x - size/2,
-          y - size/2,
-          size,
-          size
+        const res = await fetch(
+          `${API_BASE}/songs/limit/100`
         )
-      })
 
-      requestAnimationFrame(render)
+        const data = await res.json()
+
+        setCovers(data)
+
+      }catch(e){
+        console.error(e)
+      }
     }
 
-    render()
-
-    return ()=> window.removeEventListener("resize",resize)
+    load()
 
   },[])
 
   // =========================
-  // ログイン処理
+  // DOUBLE LIST
+  // seamless loop
   // =========================
+
+  const rows = useMemo(()=>{
+
+    if(!covers.length) return []
+
+    const perRow = 16
+    const arr = []
+
+    for(let i=0;i<13;i++){
+
+      const start =
+        (i * perRow) % covers.length
+
+      const row = Array.from(
+        { length: perRow },
+        (_, j) =>
+          covers[
+            (start + j) % covers.length
+          ]
+      )
+
+      arr.push([
+        ...row,
+        ...row,
+        ...row
+      ])
+    }
+
+    return arr
+
+  },[covers])
+
+  // =========================
+  // LOGIN
+  // =========================
+
   const handleLogin = async ()=>{
 
-    // 仮：固定認証（ベータ用）
-    if(id === "test" && pass === "1234"){
-      localStorage.setItem("auth","true")
+    try{
+
+      const res = await fetch(
+        `${API_BASE}/auth/login`,
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            login_id:id,
+            password:pass
+          })
+        }
+      )
+
+      if(!res.ok){
+        alert("ログイン失敗")
+        return
+      }
+
+      const data = await res.json()
+
+      localStorage.setItem("token",data.token)
+      localStorage.setItem("user_id",data.user_id)
+
       window.location.reload()
-    }else{
-      alert("IDまたはパスワードが違います")
+
+    }catch(e){
+      console.error(e)
+      alert("接続エラー")
     }
   }
 
   return(
+
     <div className="login-screen">
 
-      {/* 背景球 */}
-      <canvas ref={canvasRef} className="bg-canvas"/>
+      {/* BG */}
 
-      {/* フォーム */}
+      <div className="cover-flow-wrap">
+
+        <div className="cover-wall">
+
+          {rows.map((row,rowIndex)=>(
+
+            <div
+              className={
+                `cover-row ${
+                  rowIndex % 2 === 0
+                    ? "left-flow"
+                    : "right-flow"
+                }`
+              }
+              key={rowIndex}
+            >
+
+              {row.map((song,i)=>(
+
+                <div
+                  className="flow-cover"
+                  key={`${rowIndex}-${i}`}
+                >
+                  <img
+                    src={song.image}
+                    alt=""
+                    loading="lazy"
+                  />
+                </div>
+
+              ))}
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+      {/* glow */}
+
+      <div className="bg-glow"/>
+
+      {/* brand */}
+
+      <div className="login-brand">
+
+        <img
+          src="/icon_rock_square.png"
+          alt=""
+          className="brand-logo"
+        />
+
+        <h1>Music Player</h1>
+
+        <p>NO MUSIC NO LIFE</p>
+
+      </div>
+
+      {/* form */}
+
       <div className="login-box">
 
         <input
