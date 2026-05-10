@@ -45,6 +45,7 @@ export function SongsProvider({ children }) {
   const preloadRef = useRef(new Audio())
   const isStartingRef = useRef(false)
   const [repeatMode, setRepeatMode] = useState("none")
+  const changingTrackRef = useRef(false)
 
   
   /* =========================
@@ -499,25 +500,43 @@ export function SongsProvider({ children }) {
 
     const ended = async () => {
 
-      // 50%以上再生済みならhistory追加
-      if (countedRef.current && currentIdRef.current) {
+      // 二重実行防止
+      if (changingTrackRef.current) return
 
-        try {
+      changingTrackRef.current = true
 
-          await authfetch(`/songs/${currentIdRef.current}/play`, {
-            method: "POST"
-          })
+      try {
 
-          await loadHistory()
+        const finishedId = currentIdRef.current
 
-        } catch (e) {
-          console.error(e)
-        }
+          // history追加
+          if (countedRef.current && finishedId) {
+
+            countedRef.current = false
+
+            try {
+
+              await authfetch(`/songs/${finishedId}/play`, {
+                method: "POST"
+              })
+
+              await loadHistory()
+
+            } catch (e) {
+              console.error(e)
+            }
+          }
+
+        await nextSong()
+
+      } finally {
+
+        // 少し待つ（超重要）
+        setTimeout(() => {
+          changingTrackRef.current = false
+        }, 300)
+
       }
-
-      countedRef.current = false
-
-      await nextSong()
     }
 
     audio.addEventListener("ended", ended)
@@ -629,10 +648,27 @@ export function SongsProvider({ children }) {
     })
 
     navigator.mediaSession.setActionHandler(
-      "nexttrack", 
-      () => nextSong({
-        ignoreRepeatOne: true
-      })
+      "nexttrack",
+      async () => {
+
+        if (changingTrackRef.current) return
+
+        changingTrackRef.current = true
+
+        try {
+
+          await nextSong({
+            ignoreRepeatOne: true
+          })
+
+        } finally {
+
+          setTimeout(() => {
+            changingTrackRef.current = false
+          }, 300)
+
+        }
+      }
     )
 
     navigator.mediaSession.setActionHandler("previoustrack", prevSong)

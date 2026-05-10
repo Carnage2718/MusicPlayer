@@ -12,7 +12,6 @@ import PlaylistsScreen from "./screens/PlaylistsScreen"
 import PlaylistScreen from "./screens/PlaylistScreen"
 import CreatePlaylistScreen from "./screens/CreatePlaylistScreen"
 import UploadScreen from "./screens/UploadScreen"
-import QueueScreen from "./screens/QueueScreen"
 import ArtistsScreen from "./screens/ArtistsScreen"
 import ArtistScreen from "./screens/ArtistScreen"
 import AlbumsScreen from "./screens/AlbumsScreen"
@@ -153,22 +152,7 @@ function AppContent() {
             onSelectSong={playSong}
           />
         )
-
-      case "queue":
-
-        return(
-          <QueueScreen
-            openFullPlayer={()=>setIsFullPlayer(true)}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            onNext={nextSong}
-            onPrev={prevSong}
-            progress={progress}
-            onSelectSong={playSong}
-            onOpenArtist={openArtist}
-          />
-        )
-
+        
       case "artists":
         
         return(
@@ -246,7 +230,7 @@ function AppContent() {
 
       {/* MINI PLAYER */}
 
-      {currentSong && !isFullPlayer && currentScreen !== "queue" &&(
+      {currentSong && !isFullPlayer && (
 
         <MiniPlayer
           song={currentSong}
@@ -280,7 +264,6 @@ function AppContent() {
           isPlaying={isPlaying}
           setIsPlaying={setIsPlaying}
           progress={progress}
-          setCurrentScreen={setCurrentScreen}
           onClose={()=>setIsFullPlayer(false)}
           onOpenArtist={openArtist}
         />

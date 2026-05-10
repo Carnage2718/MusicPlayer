@@ -12,12 +12,11 @@ import {
 } from "lucide-react"
 
 import "./QueueScreen.css"
-import AppHeader from "../components/AppHeader"
 import SongCard from "../components/SongCard"
 import { useSongs } from "../context/SongsContext"
 
 export default function QueueScreen({
-  openFullPlayer,
+  setTab,
   isPlaying,
   setIsPlaying,
   onOpenArtist
@@ -49,7 +48,7 @@ export default function QueueScreen({
     if (firstScrollDone.current) return
     if (!nowPlayingRef.current) return
 
-    const container = document.querySelector(".queue-screen")
+    const container = document.querySelector(".queue-embedded")
     if (!container) return
 
     const headerHeight =
@@ -84,7 +83,7 @@ export default function QueueScreen({
 
     if (!nowPlayingRef.current) return
 
-    const container = document.querySelector(".queue-screen")
+    const container = document.querySelector(".queue-embedded")
     if (!container) return
 
     const headerHeight =
@@ -171,9 +170,17 @@ export default function QueueScreen({
 
   return (
 
-    <div className="queue-screen">
+    <div className="queue-embedded">
 
-      <AppHeader title="Queue" />
+      <div
+        className="queue-grab-wrapper"
+        onClick={()=>setTab("player")}
+      >
+
+        <div className="grab-bar"/>
+
+      </div>
+
 
       <div className="queue-scroll">
 
@@ -218,7 +225,7 @@ export default function QueueScreen({
         {/* NOW */}
         <div className="queue-now-wrapper" ref={nowPlayingRef}>
 
-          <div className="queue-now-player" onClick={openFullPlayer}>
+          <div className="queue-now-player" onClick={()=>setTab("player")}>
 
             {/* 左：SongCard */}
             <div className="queue-now-main">
