@@ -44,7 +44,7 @@ export default function FullPlayer({
   const artists = song.artists || []
 
   /* =========================
-     SWIPE CLOSE
+     DOUBLE TOUCH CLOSE
   ========================= */
 
   const handleTouchStart = (e)=>{
@@ -145,169 +145,174 @@ export default function FullPlayer({
           {/* PLAYER TAB */}
           <div className="player-tab">
 
+            <div className="player-inner">
 
-            {/* TOP BAR */}
 
-            <div
-              className="player-top"
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-            >
+              {/* TOP BAR */}
 
               <div
-                className="grab-bar"
-                onClick={onClose}
-              />
-
-            </div>
-
-            {/* RECORD */}
-
-            <div className="record-disc">
-
-              <div
-                key={song.id}
-                className={`record-vinyl ${isPlaying ? "playing":""}`}
+                className="player-top"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
               >
 
-                <div className="record-grooves"/>
-
-                {cover ? (
-
-                  <div className="record-label">
-
-                    <img
-                      src={cover}
-                      alt="cover"
-                    />
-
-                  </div>
-
-                ) : (
-
-                  <div className="record-label no-cover">
-
-                    <Music
-                      size={60}
-                      className="music-icon-large"
-                    />
-
-                  </div>
-
-                )}
-
-              </div>
-
-            </div>
-
-            {/* SONG INFO */}
-
-            <div className="full-info">
-
-
-              <TextScroller
-                text={song.title}
-                className="full-title"
-              />
-
-              <div className="full-artist">
-
-                <ArtistLinks
-                  artists={artists}
-                  onOpenArtist={(artist)=>{
-                    onOpenArtist?.(artist)
-                    onClose()
-                  }}
+                <div
+                  className="grab-bar"
+                  onClick={onClose}
                 />
 
               </div>
-            </div>
 
-            {/* SEEK BAR */}
+              {/* RECORD */}
 
-            <div className="seek-wrapper">
+              <div className="record-disc">
 
-              <div className="time-row">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <div
+                  key={song.id}
+                  className={`record-vinyl ${isPlaying ? "playing":""}`}
+                >
+
+                  <div className="record-grooves"/>
+
+                  {cover ? (
+
+                    <div className="record-label">
+
+                      <img
+                        src={cover}
+                        alt="cover"
+                      />
+
+                    </div>
+
+                  ) : (
+
+                    <div className="record-label no-cover">
+
+                      <Music
+                        size={60}
+                        className="music-icon-large"
+                      />
+
+                    </div>
+
+                  )}
+
+                </div>
+
               </div>
 
-              <input
-                className="seek-bar"
-                type="range"
-                min="0"
-                max="100"
-                value={progress || 0}
-                onChange={handleSeek}
-                style={{"--progress":`${progress}%`}}
-              />
+              {/* SONG INFO */}
 
-            </div>
+              <div className="full-info">
 
-            {/* CONTROLS */}
 
-            <div className="controls">
+                <TextScroller
+                  text={song.title}
+                  className="full-title"
+                />
 
-              <button onClick={prevSong}>
-                <SkipBack size={26}/>
-              </button>
+                <div className="full-artist">
 
-              <button
-                className="play-main"
-                onClick={()=>setIsPlaying(!isPlaying)}
-              >
-                {isPlaying
-                  ? <Pause size={36}/>
-                  : <Play size={36}/>
-                }
-              </button>
+                  <ArtistLinks
+                    artists={artists}
+                    onOpenArtist={(artist)=>{
+                      onOpenArtist?.(artist)
+                      onClose()
+                    }}
+                  />
 
-              <button onClick={nextSong}>
-                <SkipForward size={26}/>
-              </button>
+                </div>
+              </div>
 
-            </div>
+              {/* SEEK BAR */}
 
-            {/* EXTRA CONTROLS */}
+              <div className="seek-wrapper">
 
-            <div className="extra-controls">
+                <div className="time-row">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
 
-              <Shuffle
-                size={20}
-                color={shuffleMode ? "#1db954":"white"}
-                onClick={()=>setShuffleMode(!shuffleMode)}
-              />
+                <input
+                  className="seek-bar"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={progress || 0}
+                  onChange={handleSeek}
+                  style={{"--progress":`${progress}%`}}
+                />
 
-              <div
-                className="repeat-wrapper"
-                onClick={toggleRepeat}
-              >
+              </div>
 
-                <Repeat
+              {/* CONTROLS */}
+
+              <div className="controls">
+
+                <button onClick={prevSong}>
+                  <SkipBack size={26}/>
+                </button>
+
+                <button
+                  className="play-main"
+                  onClick={()=>setIsPlaying(!isPlaying)}
+                >
+                  {isPlaying
+                    ? <Pause size={36}/>
+                    : <Play size={36}/>
+                  }
+                </button>
+
+                <button onClick={nextSong}>
+                  <SkipForward size={26}/>
+                </button>
+
+              </div>
+
+              {/* EXTRA CONTROLS */}
+
+              <div className="extra-controls">
+
+                <Shuffle
                   size={20}
-                  color={repeatMode !== "none" ? "#1db954":"white"}
+                  color={shuffleMode ? "#1db954":"white"}
+                  onClick={()=>setShuffleMode(!shuffleMode)}
                 />
 
-                {repeatMode === "one" && (
-                  <span className="repeat-one">1</span>
-                )}
+                <div
+                  className="repeat-wrapper"
+                  onClick={toggleRepeat}
+                >
+
+                  <Repeat
+                    size={20}
+                    color={repeatMode !== "none" ? "#1db954":"white"}
+                  />
+
+                  {repeatMode === "one" && (
+                    <span className="repeat-one">1</span>
+                  )}
+
+                </div>
+
+                <ListMusic
+                  size={20}
+                  onClick={openQueue}
+                />
 
               </div>
 
-              <ListMusic
-                size={20}
-                onClick={openQueue}
-              />
-
             </div>
-
           </div>
-            
+              
           {/* QUEUE TAB */}
           <div className="queue-tab">
 
             <QueueScreen
+              key={tab}
               setTab={setTab}
+              onClose={onClose}
               isPlaying={isPlaying}
               setIsPlaying={setIsPlaying}
               onOpenArtist={onOpenArtist}

@@ -186,13 +186,13 @@ export default function HomeScreen({
         </div>
 
         {/* CONTINUE */}
-        {data.recent?.length > 0 && (
+        <section className="home-section">
 
-          <section className="home-section">
+          <div className="section-title">
+            Continue Listening
+          </div>
 
-            <div className="section-title">
-              Continue Listening
-            </div>
+          {data.recent?.length > 0 ? (
 
             <div className="horizontal-scroll">
 
@@ -214,9 +214,15 @@ export default function HomeScreen({
 
             </div>
 
-          </section>
+          ) : (
 
-        )}
+            <div className="empty-home-section">
+              none
+            </div>
+
+          )}
+
+        </section>
         {/* TRENDING */}
         <section className="home-section">
 

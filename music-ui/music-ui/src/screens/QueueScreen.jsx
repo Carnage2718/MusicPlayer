@@ -17,6 +17,7 @@ import { useSongs } from "../context/SongsContext"
 
 export default function QueueScreen({
   setTab,
+  onClose,
   isPlaying,
   setIsPlaying,
   onOpenArtist
@@ -34,39 +35,38 @@ export default function QueueScreen({
     historyMeta
   } = useSongs()
 
+
   const [shuffleActive, setShuffleActive] = useState(false)
 
   const nowPlayingRef = useRef(null)
-  const firstScrollDone = useRef(false)
 
   const [dragSong, setDragSong] = useState(null)
   const [progress, setProgress] = useState(0)
 
-  /* INITIAL SCROLL（変更なし） */
   useLayoutEffect(() => {
 
-    if (firstScrollDone.current) return
-    if (!nowPlayingRef.current) return
+    const container =
+      document.querySelector(".queue-embedded")
 
-    const container = document.querySelector(".queue-embedded")
-    if (!container) return
+    const now =
+      nowPlayingRef.current
 
-    const headerHeight =
-      parseInt(getComputedStyle(document.documentElement)
-        .getPropertyValue("--header-height")) || 72
+    if (!container || !now) return
 
     requestAnimationFrame(() => {
 
-      const now = nowPlayingRef.current
+      const grab =
+        document.querySelector(".queue-grab-wrapper")
 
-      const y =
-        now.getBoundingClientRect().top +
-        container.scrollTop -
-        headerHeight - 20
+      const grabHeight =
+        grab?.offsetHeight || 0
 
-      container.scrollTo({ top: y, behavior: "auto" })
+      const top = now.offsetTop - 40
 
-      firstScrollDone.current = true
+      container.scrollTo({
+        top,
+        behavior:"auto"
+      })
 
     })
 
@@ -86,14 +86,9 @@ export default function QueueScreen({
     const container = document.querySelector(".queue-embedded")
     if (!container) return
 
-    const headerHeight =
-      parseInt(getComputedStyle(document.documentElement)
-        .getPropertyValue("--header-height")) || 72
-
     const y =
       nowPlayingRef.current.getBoundingClientRect().top +
-      container.scrollTop -
-      headerHeight - 20
+      container.scrollTop - 88
 
     container.scrollTo({ top: y, behavior: "auto" })
 
@@ -174,10 +169,11 @@ export default function QueueScreen({
 
       <div
         className="queue-grab-wrapper"
-        onClick={()=>setTab("player")}
       >
 
-        <div className="grab-bar"/>
+        <div className="grab-bar"
+          onClick={onClose}
+        />
 
       </div>
 

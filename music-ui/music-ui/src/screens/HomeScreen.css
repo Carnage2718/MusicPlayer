@@ -81,22 +81,29 @@ Station Cards
 
 .station-card {
 width: 150px;
+min-width: 150px;
+max-width: 150px;
 flex-shrink: 0;
 cursor: pointer;
 }
 
-.station-cover {
-width: 150px;
-height: 150px;
-border-radius: 12px;
-overflow: hidden;
-background: #1a1a1a;
+.station-cover{
+  width:100%;
+  aspect-ratio:1/1;
+
+  border-radius:12px;
+  overflow:hidden;
+
+  background:#111;
 }
 
-.station-cover img {
-width: 100%;
-height: 100%;
-object-fit: cover;
+.station-cover img{
+  width:100%;
+  height:100%;
+
+  object-fit:cover;
+
+  display:block;
 }
 
 .station-placeholder {

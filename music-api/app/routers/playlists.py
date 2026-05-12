@@ -183,17 +183,23 @@ def get_playlist_detail(
             s.title,
 
             STRING_AGG(
-                CASE WHEN sa.role = 'main' THEN a.name END,
+                DISTINCT CASE
+                    WHEN sa.role = 'main'
+                    THEN a.name
+                END,
                 ', '
             ) AS main,
 
             STRING_AGG(
-                CASE WHEN sa.role = 'featuring' THEN a.name END,
+                DISTINCT CASE
+                    WHEN sa.role = 'featuring'
+                    THEN a.name
+                END,
                 ', '
             ) AS ft,
 
             JSON_AGG(
-                JSON_BUILD_OBJECT(
+                DISTINCT JSONB_BUILD_OBJECT(
                     'id', a.id,
                     'name', a.name,
                     'role', sa.role
@@ -205,14 +211,29 @@ def get_playlist_detail(
             ps.position
 
         FROM playlist_songs ps
-        JOIN songs s ON ps.song_id = s.id
-        LEFT JOIN song_artists sa ON sa.song_id = s.id
-        LEFT JOIN artists a ON a.id = sa.artist_id
+
+        JOIN songs s
+            ON ps.song_id = s.id
+
+        LEFT JOIN song_artists sa
+            ON sa.song_id = s.id
+
+        LEFT JOIN artists a
+            ON a.id = sa.artist_id
 
         WHERE ps.playlist_id = %s
-        AND ps.user_id=%s
+        AND ps.user_id = %s
 
-        GROUP BY s.id, ps.position
+        GROUP BY
+            ps.playlist_id,
+            ps.user_id,
+            ps.song_id,
+            ps.position,
+            s.id,
+            s.title,
+            s.cover_url,
+            s.stream_url
+
         ORDER BY ps.position
     """, (playlist_id, user))
 

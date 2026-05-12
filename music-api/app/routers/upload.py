@@ -262,19 +262,55 @@ async def upload_song(
 
         song_id = cur.fetchone()[0]
 
+        artist_objects = []
+
         
-        for a in set(artists):
+        for a in artists:
+
             insert_artist(cur, song_id, a, "main")
 
-        for a in set(ft):
+            cur.execute("""
+            SELECT id,name
+            FROM artists
+            WHERE normalized_name=%s
+            """,(a.lower(),))
+
+            row = cur.fetchone()
+
+            artist_objects.append({
+                "id": row[0],
+                "name": row[1],
+                "role": "main"
+            })
+
+        for a in ft:
+
             insert_artist(cur, song_id, a, "featuring")
+
+            cur.execute("""
+            SELECT id,name
+            FROM artists
+            WHERE normalized_name=%s
+            """,(a.lower(),))
+
+            row = cur.fetchone()
+
+            artist_objects.append({
+                "id": row[0],
+                "name": row[1],
+                "role": "featuring"
+            })
 
         conn.commit()
 
         return {
             "status": "ok",
-            "song_id": song_id,
-            "cover_url": cover_key if cover_key else None
+            "song": {
+                "id": song_id,
+                "title": title,
+                "artists": artist_objects,
+                "cover_url": cover_key
+            }
         }
 
     except Exception as e:
@@ -287,6 +323,33 @@ async def upload_song(
         os.remove(temp.name)
         if processed and os.path.exists(processed):
             os.remove(processed)
+
+@router.post("/song/{song_id}/genres")
+def set_song_genres(song_id:int, data:dict=Body(...)):
+
+    genre_ids = data.get("genre_ids", [])
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+    DELETE FROM song_genres
+    WHERE song_id=%s
+    """,(song_id,))
+
+    for genre_id in genre_ids:
+
+        cur.execute("""
+        INSERT INTO song_genres(song_id, genre_id)
+        VALUES (%s,%s)
+        """,(song_id, genre_id))
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return {"status":"ok"}
 
 # =============================
 # COVER ASSIGN

@@ -439,6 +439,9 @@ function SongUpload({
   const [total,setTotal] = useState(0)
   const [result,setResult] = useState([])
   const [recent,setRecent] = useState([])
+  const [uploadedSongs,setUploadedSongs] = useState([])
+  const [genres,setGenres] = useState([])
+  const [selectedGenres,setSelectedGenres] = useState({})
 
   useEffect(()=>{
     const fetchRecent = async ()=>{
@@ -452,6 +455,14 @@ function SongUpload({
     }
     fetchRecent()
   },[])
+
+  useEffect(() => {
+
+    fetch(`${API_BASE}/genres`)
+      .then(r => r.json())
+      .then(setGenres)
+
+  }, [])
 
   const handleFiles = (e)=>{
     const f = Array.from(e.target.files || [])
@@ -504,9 +515,12 @@ function SongUpload({
         const data = await res.json()
 
         if(data.status==="ok" && data.song){
+          
+          setUploadedSongs(prev => [
+            data.song,
+            ...prev
+          ])
 
-          // 🔥 1曲ずつ追加（最重要）
-          setResult(prev => [data.song, ...prev])
         }
 
       }catch(e){
@@ -516,9 +530,70 @@ function SongUpload({
       setProgress(i+1)
     }
 
-    setTimeout(reset,1500)
 
     setLoading(false)
+  }
+
+  const toggleGenre = (songId, genreId)=>{
+
+    setSelectedGenres(prev => {
+
+      const current = prev[songId] || []
+
+      const updated = current.includes(genreId)
+        ? current.filter(id => id !== genreId)
+        : [...current, genreId]
+
+      return {
+        ...prev,
+        [songId]: updated
+      }
+
+    })
+
+  }
+
+  const confirmUploads = async()=>{
+
+    try{
+
+      for(const song of uploadedSongs){
+
+        const genre_ids =
+          selectedGenres[song.id] || []
+
+        await fetch(
+          `${API_BASE}/upload/song/${song.id}/genres`,
+          {
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+              genre_ids
+            })
+          }
+        )
+
+      }
+
+      // 🔥 recent再取得
+      const res = await fetch(`${API_BASE}/songs/recent`)
+      const data = await res.json()
+
+      setRecent(data)
+
+      setUploadedSongs([])
+      setSelectedGenres({})
+
+      setFiles([])
+      setProgress(0)
+      setTotal(0)
+
+    }catch(e){
+      console.error(e)
+    }
+
   }
 
   const reset = ()=>{
@@ -526,6 +601,7 @@ function SongUpload({
     setProgress(0)
     setTotal(0)
     setResult([])
+    setUploadedSongs([])
   }
 
   return(
@@ -565,25 +641,85 @@ function SongUpload({
 
       {/* 🔥 アップロード結果 */}
 
-      {result.length > 0 && (
-        <div className="section-title">New Uploads</div>
+        {uploadedSongs.length > 0 && (
+
+        <section className="upload-results">
+
+          <div className="upload-section-title">
+            Results
+          </div>
+
+          {uploadedSongs.map(song => (
+
+            <div
+              key={song.id}
+              className="upload-result-card"
+            >
+
+              <SongCard
+                song={song}
+                onSelectSong={onSelectSong}
+                onOpenArtist={onOpenArtist}
+              />
+
+              <div className="song-genre-block">
+
+                <div className="song-genre-title">
+                  Genres
+                </div>
+
+                <div className="genre-selector">
+
+                  {genres.map(genre => {
+
+                    const active =
+                      selectedGenres[song.id]?.includes(genre.id)
+
+                    return (
+
+                      <button
+                        key={genre.id}
+                        className={`genre-chip ${active ? "active" : ""}`}
+                        onClick={() =>
+                          toggleGenre(song.id, genre.id)
+                        }
+                      >
+                        {genre.name}
+                      </button>
+
+                    )
+
+                  })}
+
+                </div>
+
+              </div>
+
+            </div>
+
+          ))}
+
+          <div className="upload-footer">
+
+            <div className="upload-ready-count">
+              {uploadedSongs.length} songs ready
+            </div>
+
+            <button
+              className="upload-confirm-btn"
+              onClick={confirmUploads}
+            >
+              Confirm
+            </button>
+
+          </div>
+
+        </section>
       )}
 
-      {result.map(song => (
-        <SongCard 
-          key={`new-${song.id}`}
-          song={{
-            id: song.id,
-            title: song.title,
-            artist: song.artists ?? song.artist ?? "Unknown",
-            image: song.cover_url || song.image
-          }}
-          onSelectSong={onSelectSong}
-          onOpenArtist={onOpenArtist}
-        />
-      ))}
-
-      <div className="section-title">Recent</div>
+      <div className="upload-section-title">
+        Recent
+      </div>
 
       {recent.map(song => (
         <SongCard 
