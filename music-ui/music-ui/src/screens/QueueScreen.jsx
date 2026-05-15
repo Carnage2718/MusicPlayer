@@ -196,24 +196,26 @@ export default function QueueScreen({
               onDrop={() => handleDrop(song)}
             >
 
-              <div className="queue-main">
-                <SongCard
-                  song={{
-                    id: song.song_id,
-                    title: song.title,
-                    main: song.main,
-                    ft: song.ft,
-                    artists: song.artists,
-                    image: song.cover || song.image,
-                    url: song.url
-                  }}
-                  onSelectSong={() => playSong(song)}
-                  onOpenArtist={onOpenArtist}
-                />
+              <div className="queue-background">
+
+                <div className="queue-main">
+                  <SongCard
+                    song={{
+                      id: song.song_id,
+                      title: song.title,
+                      main: song.main,
+                      ft: song.ft,
+                      artists: song.artists,
+                      image: song.cover || song.image,
+                      url: song.url
+                    }}
+                    onSelectSong={() => playSong(song)}
+                    onOpenArtist={onOpenArtist}
+                  />
+                </div>
+
+                <GripVertical className="drag" size={16} />
               </div>
-
-              <GripVertical className="drag" size={16} />
-
             </div>
           ))}
         </div>
@@ -300,24 +302,27 @@ export default function QueueScreen({
               onDrop={() => handleDrop(song)}
             >
 
-              <div className="queue-main">
-                <SongCard
-                  song={{
-                    id: song.song_id,
-                    title: song.title,
-                    main: song.main,
-                    ft: song.ft,
-                    artists: song.artists,
-                    image: song.cover || song.image,
-                    url: song.url
-                  }}
-                  onSelectSong={() => playSong(song)}
-                  onOpenArtist={onOpenArtist}
-                />
+              <div className="queue-background">
+
+                <div className="queue-main">
+                  <SongCard
+                    song={{
+                      id: song.song_id,
+                      title: song.title,
+                      main: song.main,
+                      ft: song.ft,
+                      artists: song.artists,
+                      image: song.cover || song.image,
+                      url: song.url
+                    }}
+                    onSelectSong={() => playSong(song)}
+                    onOpenArtist={onOpenArtist}
+                  />
+                </div>
+
+                <GripVertical className="drag" size={16} />
+              
               </div>
-
-              <GripVertical className="drag" size={16} />
-
             </div>
           ))}
 

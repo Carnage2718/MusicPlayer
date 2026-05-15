@@ -11,9 +11,6 @@
 
   cursor:pointer;
 
-  background:rgba(18,18,18,0.72);
-
-  backdrop-filter:blur(10px);
 
   transition:
     background .18s ease,

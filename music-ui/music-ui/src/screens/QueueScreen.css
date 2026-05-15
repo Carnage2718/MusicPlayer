@@ -66,7 +66,7 @@ SCROLL AREA
 .queue-scroll{
 
   padding:
-    0 16px
+    0 4px
     max(120px, env(safe-area-inset-bottom));
 }
 
@@ -84,8 +84,6 @@ NOW PLAYING
 
   background:rgba(24,24,24,.95);
 
-  box-shadow:
-    0 8px 22px rgba(0,0,0,.45);
 }
 
 .queue-now-player{
@@ -158,16 +156,47 @@ SECTION
 ROWS
 ========================= */
 
-.queue-row{
+.queue-background{
+
+  width:100%;
 
   display:flex;
   align-items:center;
 
-  gap:10px;
+  gap:8px;
 
-  padding:10px;
+  padding:8px 8px;
 
-  border-radius:12px;
+  border-radius:18px;
+
+  background:rgba(17,17,17,.72);
+
+  backdrop-filter:blur(10px);
+
+  box-sizing:border-box;
+}
+
+.queue-background .song-card{
+
+  padding:6px 0;
+
+  border-radius:0;
+
+  background:none;
+}
+
+.queue-row{
+
+  width:100%;
+
+  display:flex;
+  align-items:center;
+
+  margin-top:15px;
+
+  padding:0;
+
+  box-sizing:border-box;
 }
 
 .queue-main{
@@ -176,7 +205,12 @@ ROWS
 }
 
 .drag{
+
   opacity:.5;
+
+  flex-shrink:0;
+
+  margin-right:2px;
 }
 
 /* =========================
