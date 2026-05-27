@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import { Play, Shuffle } from "lucide-react"
-import API_BASE from "../api"
+import API_BASE, { authfetch } from "../api"
 import SongCard from "../components/SongCard"
 import AppHeader from "../components/AppHeader"
 import { useSongs } from "../context/SongsContext"
@@ -18,17 +18,25 @@ export default function GenreScreen(){
 
   const letterRefs = useRef({})
 
+  // 🔥 追加
+  const { playFrom  } = useSongs()
+
   /* =========================
      LOAD GENRES
   ========================= */
 
   useEffect(()=>{
     const load = async()=>{
-      const res = await fetch(`${API_BASE}/genres`)
+      const res = await authfetch(`/genres`)
       const data = await res.json()
+
       setGenres(data)
-      setSelected(data[0]?.id)
+
+      if(data.length > 0){
+        setSelected(data[0].id)
+      }
     }
+
     load()
   },[])
 
@@ -40,8 +48,12 @@ export default function GenreScreen(){
     if(!selected) return
 
     const load = async()=>{
-      const res = await fetch(`${API_BASE}/genres/${selected}/songs`)
+      const res = await authfetch(
+        `/genres/${selected}/songs`
+      )
+
       const data = await res.json()
+
       setSongs(data)
     }
 
@@ -55,11 +67,18 @@ export default function GenreScreen(){
   const grouped = {}
 
   songs.forEach(s=>{
-    const letter = /^[A-Z]/.test(s.title?.[0]?.toUpperCase())
-      ? s.title[0].toUpperCase()
-      : "#"
 
-    if(!grouped[letter]) grouped[letter] = []
+    const first = s.title?.[0]?.toUpperCase()
+
+    const letter =
+      /^[A-Z]$/.test(first)
+        ? first
+        : "#"
+
+    if(!grouped[letter]){
+      grouped[letter] = []
+    }
+
     grouped[letter].push(s)
   })
 
@@ -67,6 +86,7 @@ export default function GenreScreen(){
 
   const jump = (l)=>{
     const el = letterRefs.current[l]
+
     if(!el) return
 
     window.scrollTo({
@@ -75,27 +95,35 @@ export default function GenreScreen(){
     })
   }
 
+  /* =========================
+     PLAY
+  ========================= */
 
-  const playGenre = async () => {
-    if(isCreatingQueue) return
+  const playGenre = async()=>{
+
+    if(isCreatingQueue || !selected){
+      return
+    }
 
     setIsCreatingQueue(true)
 
     try{
-        const res = await fetch(
+
+      await playFrom(
         `${API_BASE}/queue/from_genre/${selected}?shuffle=${isShuffle}`,
-        { method:"POST" }
-        )
+      )
 
-        const data = await res.json()
+      window.dispatchEvent(
+        new Event("queueUpdated")
+      )
 
-        setCurrentId(data.current)
-        setIsPlaying(true)
+    }catch(err){
 
-        window.dispatchEvent(new Event("queueUpdated"))
+      console.error("GENRE PLAY ERROR:", err)
 
     }finally{
-        setIsCreatingQueue(false)
+
+      setIsCreatingQueue(false)
     }
   }
 
@@ -107,26 +135,37 @@ export default function GenreScreen(){
     return `genres-bg-${selected}`
   }
 
+  const toggleShuffle = () => {
+    setIsShuffle(prev => !prev)
+  }
+
   return(
     <div className={`genres-screen ${getBgClass()}`}>
 
       <AppHeader title="Genres"/>
 
-      {/* GENRE LIST */}
+      {/* GENRES */}
       <div className="genres-list">
+
         {genres.map(g=>(
           <div
             key={g.id}
-            className={`genres-chip ${selected===g.name ? "active":""}`}
+            className={`genres-chip ${
+              selected === g.id
+                ? "active"
+                : ""
+            }`}
             onClick={()=>setSelected(g.id)}
           >
             {g.name}
           </div>
         ))}
+
       </div>
 
       {/* CONTROLS */}
       <div className="genres-controls">
+
         <button
           className="genres-play"
           onClick={playGenre}
@@ -136,23 +175,30 @@ export default function GenreScreen(){
         </button>
 
         <button
-          className={`genres-shuffle ${isShuffle ? "active":""}`}
-          onClick={()=>setIsShuffle(!isShuffle)}
+          className={`genres-shuffle ${isShuffle ? "active" : ""}`}
+          onClick={toggleShuffle}
         >
           <Shuffle size={18}/>
           Shuffle
         </button>
+
       </div>
 
-      {/* SONG LIST */}
+      {/* SONGS */}
       <div className="genres-list-wrap">
 
         {alphabet.map(letter=>(
+
           <div
             key={letter}
-            ref={el => letterRefs.current[letter] = el}
+            ref={el=>{
+              letterRefs.current[letter] = el
+            }}
           >
-            <div className="genres-letter">{letter}</div>
+
+            <div className="genres-letter">
+              {letter}
+            </div>
 
             {grouped[letter].map(song=>(
               <SongCard
@@ -160,13 +206,15 @@ export default function GenreScreen(){
                 song={song}
               />
             ))}
+
           </div>
         ))}
 
       </div>
 
-      {/* ALPHABET BAR */}
+      {/* ALPHABET */}
       <div className="genres-alphabet-bar">
+
         {alphabet.map(l=>(
           <div
             key={l}
@@ -176,6 +224,7 @@ export default function GenreScreen(){
             {l}
           </div>
         ))}
+
       </div>
 
     </div>

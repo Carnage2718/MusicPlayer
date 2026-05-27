@@ -41,6 +41,7 @@ export function SongsProvider({ children }) {
   const songCache = useRef({})
   const streamCache = useRef({})
   const nextCache = useRef({})
+  const queueLoadIdRef = useRef(0)
   const userInteracted = useRef(false)
   const preloadRef = useRef(new Audio())
   const isStartingRef = useRef(false)
@@ -268,29 +269,43 @@ export function SongsProvider({ children }) {
 
   useEffect(() => {
 
+    queueLoadIdRef.current += 1
+
+    const loadId = queueLoadIdRef.current
+
     if (!queueIds.length) {
       setQueue([])
       return
     }
 
-    let cancelled = false
-    
     const load = async () => {
 
+      // 先頭20件
       const first = await Promise.all(
         queueIds.slice(0, 20).map(getSongMeta)
       )
 
-      if (cancelled) return
-      setQueue([...first])
+      // 🔥 古いロード破棄
+      if (loadId !== queueLoadIdRef.current) return
 
+      setQueue(first)
+
+      // 残り
       const rest = queueIds.slice(20)
 
       for (let id of rest) {
 
-        if (cancelled) return
+        // 🔥 毎回チェック
+        if (loadId !== queueLoadIdRef.current) {
+          return
+        }
 
         const meta = await getSongMeta(id)
+
+        // 🔥 await後もチェック
+        if (loadId !== queueLoadIdRef.current) {
+          return
+        }
 
         setQueue(prev => [...prev, meta])
 
@@ -299,8 +314,6 @@ export function SongsProvider({ children }) {
     }
 
     load()
-
-    return () => { cancelled = true }
 
   }, [queueIds])
 

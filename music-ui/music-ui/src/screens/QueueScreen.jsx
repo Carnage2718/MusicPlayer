@@ -221,6 +221,8 @@ export default function QueueScreen({
         </div>
 
         {/* NOW */}
+        <div className="queue-subtitle">Now Playing</div>
+
         <div className="queue-now-wrapper" ref={nowPlayingRef}>
 
           <div className="queue-now-player" onClick={()=>setTab("player")}>

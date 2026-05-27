@@ -933,7 +933,7 @@ def queue_from_artist(
 
 @router.post("/from_genre/{genre_id}")
 def queue_from_genre(
-    genre_id: int, 
+    genre_id: int,
     shuffle: bool = False,
     user=Depends(get_current_user)
 ):
@@ -943,39 +943,70 @@ def queue_from_genre(
 
     try:
 
+        # 🔥 artist版と同じ構造に統一
         cur.execute("""
             SELECT s.id
             FROM songs s
-            JOIN song_genres sg ON sg.song_id = s.id
+            JOIN song_genres sg
+                ON sg.song_id = s.id
             WHERE sg.genre_id = %s
             ORDER BY
-                CASE 
+                CASE
                     WHEN s.title ~ '^[A-Za-z]' THEN 0
                     ELSE 1
                 END,
                 LOWER(s.title)
         """, (genre_id,))
 
-        song_ids = [r[0] for r in cur.fetchall()]
+        rows = cur.fetchall()
+
+        # 🔥 Python側で重複除去
+        seen = set()
+
+        song_ids = []
+
+        for r in rows:
+
+            sid = r[0]
+
+            if sid in seen:
+                continue
+
+            seen.add(sid)
+
+            song_ids.append(sid)
 
         if not song_ids:
-            return {"current": None, "queue": []}
-        
+            return {
+                "current": None,
+                "queue": []
+            }
+
         original_order = song_ids.copy()
 
         if shuffle:
             random.shuffle(song_ids)
 
+        # 🔥 queue reset
         cur.execute("""
             DELETE FROM playback_queue
             WHERE user_id=%s
-        """,(user,))
+        """, (user,))
 
+        # 🔥 insert
         cur.executemany("""
-            INSERT INTO playback_queue (user_id, song_id, position)
+            INSERT INTO playback_queue
+            (
+                user_id,
+                song_id,
+                position
+            )
             VALUES (%s, %s, %s)
-        """, [(user, sid, i) for i, sid in enumerate(song_ids)])
-        
+        """, [
+            (user, sid, i)
+            for i, sid in enumerate(song_ids)
+        ])
+
         save_queue_context(
             cur,
             user,
@@ -990,7 +1021,7 @@ def queue_from_genre(
             UPDATE playback_state
             SET current_index = 0
             WHERE user_id=%s
-        """,(user,))
+        """, (user,))
 
         conn.commit()
 
@@ -999,11 +1030,23 @@ def queue_from_genre(
             "queue": song_ids[1:]
         }
 
+    except Exception as e:
+
+        conn.rollback()
+
+        print("FROM_GENRE ERROR:", e)
+
+        return {
+            "current": None,
+            "queue": [],
+            "error": str(e)
+        }
+
     finally:
+
         cur.close()
         conn.close()
-
-
+        
 # =========================
 # shuffle（現在queue）
 # =========================
