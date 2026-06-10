@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
-import API_BASE from "../api"
+import { useState, useEffect, useRef } from "react"
+import API_BASE, { authfetch } from "../api"
 import AppHeader from "../components/AppHeader"
+import SongCard from "../components/SongCard"
 import { Music } from "lucide-react"
 import "./SearchScreen.css"
 
@@ -14,10 +15,16 @@ export default function SearchScreen({
   const [query,setQuery] = useState("")
   const [data,setData] = useState(null)
   const [loading,setLoading] = useState(false)
+  const inputRef = useRef(null)
+  const [songs, setSongs] = useState([])
 
   /* =========================
      SEARCH
   ========================= */
+
+  useEffect(()=>{
+    inputRef.current?.focus()
+  },[])
 
   useEffect(()=>{
 
@@ -31,7 +38,7 @@ export default function SearchScreen({
       try{
         setLoading(true)
 
-        const res = await fetch(`${API_BASE}/search?q=${query}`)
+        const res = await authfetch(`/search?q=${query}`)
         const json = await res.json()
 
         setData(json)
@@ -54,7 +61,7 @@ export default function SearchScreen({
 
   const renderCover = (item)=>{
 
-    const src = item.image || item.cover
+    const src = item.image || item.cover_url
 
     if(src){
       return <img src={src} className="search-cover"/>
@@ -89,7 +96,7 @@ export default function SearchScreen({
     }
 
     if(type==="playlist"){
-      onOpenPlaylist?.(item.id)
+      onOpenPlaylist?.(item)
     }
   }
 
@@ -102,6 +109,7 @@ export default function SearchScreen({
       {/* INPUT */}
       <div className="search-bar">
         <input
+          ref={inputRef}
           placeholder="Search songs, artists, albums..."
           value={query}
           onChange={(e)=>setQuery(e.target.value)}
@@ -116,20 +124,22 @@ export default function SearchScreen({
 
           <>
             {/* SONGS */}
-            {data.songs?.length>0 && (
-              <Section title="Songs">
-                {data.songs.map(s=>(
-                  <Row
-                    key={s.id}
-                    item={s}
-                    subtitle={s.artists}
-                    onClick={()=>handleClick(s,"song")}
-                    renderCover={renderCover}
-                  />
-                ))}
-              </Section>
-            )}
-
+            {data.songs.map(song=>(
+              <SongCard
+                key={song.id}
+                song={{
+                  id: song.id,
+                  title: song.title,
+                  main: song.main,
+                  ft: song.ft,
+                  artists: song.artists,
+                  image: song.image,
+                  url: song.url
+                }}
+                onSelectSong={() => onSelectSong(song)}
+                onOpenArtist={onOpenArtist}
+              />
+            ))}
             {/* ARTISTS */}
             {data.artists?.length>0 && (
               <Section title="Artists">

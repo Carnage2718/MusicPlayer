@@ -78,6 +78,7 @@ function AppContent() {
             onSelectSong={playSong}
             onOpenArtist={openArtist}
             onOpenAlbum={openAlbum}
+            onOpenPlaylist={openPlaylist}
           />
         )
 

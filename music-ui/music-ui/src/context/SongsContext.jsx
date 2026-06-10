@@ -47,6 +47,7 @@ export function SongsProvider({ children }) {
   const isStartingRef = useRef(false)
   const [repeatMode, setRepeatMode] = useState("none")
   const changingTrackRef = useRef(false)
+  const loadSongIdRef = useRef(0)
 
   
   /* =========================
@@ -140,7 +141,16 @@ export function SongsProvider({ children }) {
   useEffect(() => {
     authfetch("/queue")
       .then(res => res.json())
-      .then(applyQueue)
+      .then(data => {
+
+        applyQueue(data)
+
+        if (data.current) {
+          userInteracted.current = true
+          setIsPlaying(true)
+        }
+      })
+
   }, [])
 
   /* =========================
@@ -192,15 +202,28 @@ export function SongsProvider({ children }) {
 
   useEffect(() => {
 
-    if (!currentId) return
+    if (!currentId) {
+      setCurrent(null)
+      setProgress(0)
+      return
+    }
+    setProgress(0)
+
+    currentIdRef.current = currentId
 
     let cancelled = false
 
+    const myLoadId= ++loadSongIdRef.current
+    
     const load = async () => {
+
+      console.log("LOAD START", currentId)
 
       const id = currentId
 
       const meta = await getSongMeta(id)
+
+      console.log("META OK", id)
 
       let stream =
         nextCache.current[id] ||
@@ -210,46 +233,75 @@ export function SongsProvider({ children }) {
         stream = await getStream(id)
       }
 
-      if (cancelled || id !== currentIdRef.current) return
+      console.log("STREAM", stream)
 
-      const song = { ...meta, url: stream }
-      setCurrent(song)
+      if (cancelled || id !== currentIdRef.current) {
+        console.log("CANCELLED")
+        return
+      }
 
       const audio = audioRef.current
 
       if (audio.src !== stream) {
 
+        console.log("SET SRC")
+
+        audio.pause()
+        audio.currentTime = 0
         audio.src = stream
         audio.load()
 
-        await new Promise((resolve) => {
+        await Promise.race([
+          new Promise(resolve => {
 
-          if (audio.readyState >= 3) {
-            resolve()
-            return
-          }
+            if (audio.readyState >= 3) {
+              resolve()
+              return
+            }
 
-          const handler = () => {
-            audio.removeEventListener("canplay", handler)
-            resolve()
-          }
+            const handler = () => {
+              audio.removeEventListener("canplay", handler)
+              resolve()
+            }
 
-          audio.addEventListener("canplay", handler)
+            audio.addEventListener("canplay", handler)
 
-          if (cancelled) {
-            audio.removeEventListener("canplay", handler)
-          }
+          }),
 
-        })
+          new Promise(resolve =>
+            setTimeout(resolve, 5000)
+          )
+        ])
+
+        console.log("CANPLAY FINISHED")
         
       }
 
+      const song = { ...meta, url: stream }
+      setCurrent(song)
+
+      console.log("SET CURRENT")
+
+      if (
+        cancelled ||
+        myLoadId !== loadSongIdRef.current
+      ){
+        return
+      }
+
+      console.log("USER_INTERACTED", userInteracted.current)
+
       if (userInteracted.current) {
+
+        console.log("PLAY START")
 
         try {
           await audio.play()
+          console.log("PLAY SUCCESS")
+          setIsPlaying(true)
         } catch (e) {
-          console.error(e)
+          setIsPlaying(false)
+          console.error("PLAY ERROR", e)
         }
       }
     }
@@ -338,16 +390,23 @@ export function SongsProvider({ children }) {
   ========================= */
 
   useEffect(() => {
+
     const audio = audioRef.current
     if (!audio) return
 
     if (isPlaying) {
-      audio.play().catch(()=>{})
+
+      audio.play().catch(() => {
+        setIsPlaying(false)
+      })
+
     } else {
+
       audio.pause()
+
     }
 
-  }, [isPlaying, current]) 
+  }, [isPlaying])
 
   /* =========================
      PROGRESS
@@ -358,9 +417,7 @@ export function SongsProvider({ children }) {
     const audio = audioRef.current
     if (!audio) return
 
-    let raf
-
-    const loop = () => {
+    const onTimeUpdate = () => {
 
       if (audio.duration) {
         const percent =
@@ -371,27 +428,42 @@ export function SongsProvider({ children }) {
         if (
           !countedRef.current &&
           currentId &&
-          audio.duration > 0 &&
           percent >= 50
         ) {
 
           countedRef.current = true
 
-        }
-      } else {
-        setProgress(0)
-      }
+          authfetch(
+            `/songs/${currentId}/play`,
+            { method:"POST" }
+          )
+          .then(loadHistory)
+          .catch(()=>{})
 
-      raf = requestAnimationFrame(loop)
+        }
+
+      } else {
+
+        setProgress(0)
+
+      }
     }
 
-    setProgress(0)
-    raf = requestAnimationFrame(loop)
+    audio.addEventListener(
+      "timeupdate",
+      onTimeUpdate
+    )
 
-    return () => cancelAnimationFrame(raf)
+    return () => {
 
-  }, [current])
+      audio.removeEventListener(
+        "timeupdate",
+        onTimeUpdate
+      )
 
+    }
+
+  }, [currentId])
 
   /* =========================
      NEXT
@@ -401,12 +473,16 @@ export function SongsProvider({ children }) {
     ignoreRepeatOne = false
   } = {}) => {
 
+    console.log("NEXT SONG")
+
     const res = await authfetch(
       `/queue/next?ignore_repeat_one=${ignoreRepeatOne}`, 
       {
         method: "POST"
       }
     )
+
+    console.log("NEXT RESPONSE")
 
     const data = await res.json()
 
@@ -428,7 +504,18 @@ export function SongsProvider({ children }) {
 
     applyQueue(data)
 
-    setIsPlaying(!!data.current)
+    console.log("APPLY DONE")
+    
+    if(!data.current){
+      const audio = audioRef.current
+      
+      audio.pause()
+      audio.currentTime = 0
+
+      setIsPlaying(false)
+
+      return
+    }
 
   }
 
@@ -466,9 +553,20 @@ export function SongsProvider({ children }) {
       }
     ).then(r => r.json())
 
+    audioRef.current.pause()
+
     applyQueue(data)
 
-    setIsPlaying(true)
+    setProgress(0)
+
+    if (data.current){
+      setCurrent({
+        song_id:data.current,
+        title:"Loading...",
+        artists: [],
+        image: null
+      })
+    }
   }
 
   /* =========================
@@ -513,38 +611,18 @@ export function SongsProvider({ children }) {
 
     const ended = async () => {
 
-      // 二重実行防止
+      console.log("ENDED", changingTrackRef.current)
+
       if (changingTrackRef.current) return
 
       changingTrackRef.current = true
 
       try {
 
-        const finishedId = currentIdRef.current
-
-          // history追加
-          if (countedRef.current && finishedId) {
-
-            countedRef.current = false
-
-            try {
-
-              await authfetch(`/songs/${finishedId}/play`, {
-                method: "POST"
-              })
-
-              await loadHistory()
-
-            } catch (e) {
-              console.error(e)
-            }
-          }
-
         await nextSong()
 
       } finally {
 
-        // 少し待つ（超重要）
         setTimeout(() => {
           changingTrackRef.current = false
         }, 300)
@@ -552,7 +630,16 @@ export function SongsProvider({ children }) {
       }
     }
 
-    audio.addEventListener("ended", ended)
+    audio.addEventListener("pause", () => {
+      console.log(
+        "PAUSE",
+        audio.currentTime,
+        audio.duration
+      )
+    })
+
+    audio.addEventListener("ended",ended)
+
     return () => audio.removeEventListener("ended", ended)
 
   }, [])
@@ -572,11 +659,6 @@ export function SongsProvider({ children }) {
       console.error(e)
     }
   }
-
-
-  useEffect(() =>{
-    currentIdRef.current = currentId
-  }, [currentId])
 
 
   /* =========================
@@ -604,9 +686,7 @@ export function SongsProvider({ children }) {
       if (!firstId) return
 
       applyQueue(data)
-
-      setIsPlaying(true)
-
+      setProgress(0)
 
     } catch (e) {
       console.error(e)
@@ -646,6 +726,34 @@ export function SongsProvider({ children }) {
     })
 
   }, [current])
+
+  useEffect(() => {
+
+    const audio = audioRef.current
+
+    if (!audio) return
+
+    if (!("mediaSession" in navigator)) return
+
+    const onPlay = () => {
+      navigator.mediaSession.playbackState = "playing"
+    }
+
+    const onPause = () => {
+      navigator.mediaSession.playbackState = "paused"
+    }
+
+    audio.addEventListener("play", onPlay)
+    audio.addEventListener("pause", onPause)
+
+    return () => {
+
+      audio.removeEventListener("play", onPlay)
+      audio.removeEventListener("pause", onPause)
+
+    }
+
+  }, [])
 
   useEffect(() => {
     if (!("mediaSession" in navigator)) return

@@ -491,8 +491,16 @@ def next_song(
                 "queue": ids[1:]
             }
         else:
-            return{"current": None, "queue": []}
-        # 🔥 最後に統一して返す
+
+            set_index(cur, user, len(ids))
+
+            conn.commit()
+
+            return {
+                "current": None,
+                "queue": []
+            }
+        
         ids = get_queue_ids(cur, user)
         current_index, _ = get_state(cur, conn, user)
 

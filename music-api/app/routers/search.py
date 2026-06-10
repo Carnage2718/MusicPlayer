@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from app.database import get_connection
+from app.routers.auth import get_current_user
 from app.utils.url import build_cover_url  # 🔥 追加
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -8,7 +9,10 @@ router = APIRouter(prefix="/search", tags=["search"])
 # GLOBAL SEARCH（完全版）
 # =============================
 @router.get("")
-def global_search(q: str = ""):
+def global_search(
+    q: str = "",
+    user=Depends(get_current_user)
+):
 
     conn = get_connection()
     cur = conn.cursor()
@@ -19,20 +23,57 @@ def global_search(q: str = ""):
     # SONGS（完全版）
     # =====================
     cur.execute("""
-    SELECT 
+    SELECT
         s.id,
         s.title,
-        STRING_AGG(a.name, ', ') as artists,
-        s.cover_url
+
+        STRING_AGG(
+            CASE WHEN sa.role='main'
+            THEN a.name END,
+            ', '
+        ) AS main,
+
+        STRING_AGG(
+            CASE WHEN sa.role='featuring'
+            THEN a.name END,
+            ', '
+        ) AS ft,
+
+        JSON_AGG(
+            JSON_BUILD_OBJECT(
+                'id',a.id,
+                'name',a.name,
+                'role',sa.role
+            )
+        ) AS artists,
+
+        s.cover_url,
+        s.stream_url
+
     FROM songs s
-    LEFT JOIN song_artists sa ON s.id = sa.song_id
-    LEFT JOIN artists a ON sa.artist_id = a.id
-    WHERE LOWER(REGEXP_REPLACE(s.title, '\s+', ' ', 'g'))
-      LIKE %s
-    GROUP BY s.id, s.title, s.cover_url
+    LEFT JOIN song_artists sa
+        ON s.id = sa.song_id
+    LEFT JOIN artists a
+        ON sa.artist_id = a.id
+
+    WHERE LOWER(
+        REGEXP_REPLACE(
+            s.title,
+            '\s+',
+            ' ',
+            'g'
+        )
+    ) LIKE %s
+
+    GROUP BY
+        s.id,
+        s.title,
+        s.cover_url,
+        s.stream_url
+
     ORDER BY s.title
     LIMIT 10
-    """, (keyword, ))
+    """,(keyword,))
 
     songs = cur.fetchall()
 
@@ -59,13 +100,19 @@ def global_search(q: str = ""):
     # PLAYLISTS
     # =====================
     cur.execute("""
-        SELECT id, name, cover_url
+        SELECT 
+            id, 
+            name, 
+            cover_url
         FROM playlists
-        WHERE LOWER(REGEXP_REPLACE(name, '\s+', ' ', 'g'))
+        WHERE 
+            user_id=%s
+        AND
+            LOWER(REGEXP_REPLACE(name, '\s+', ' ', 'g'))
             LIKE %s
         ORDER BY name
         LIMIT 10
-    """, (keyword,))
+    """, (user, keyword,))
 
     playlists = cur.fetchall()
 
@@ -91,8 +138,11 @@ def global_search(q: str = ""):
             {
                 "id": s[0],
                 "title": s[1],
-                "artists": s[2],
-                "cover_url": build_cover_url(s[3])
+                "main": s[2],
+                "ft": s[3],
+                "artists": s[4],
+                "image": build_cover_url(s[5]),
+                "url": s[6]
             }
             for s in songs
         ],
@@ -101,7 +151,7 @@ def global_search(q: str = ""):
                 "id": a[0],
                 "name": a[1],
                 "artist": a[2],
-                "cover_url": build_cover_url(a[3])
+                "image": build_cover_url(a[3])
             }
             for a in albums
         ],
@@ -117,7 +167,7 @@ def global_search(q: str = ""):
             {
                 "id": ar[0],
                 "name": ar[1],
-                "cover_url": build_cover_url(ar[2])
+                "image": build_cover_url(ar[2])
             }
             for ar in artists
         ]
