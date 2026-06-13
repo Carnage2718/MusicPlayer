@@ -483,6 +483,7 @@ export default function PlaylistScreen({
                   }}
                   onSelectSong={()=>onSelectSong(t, tracks)}
                   onOpenArtist={onOpenArtist}
+                  showmenu=false
                 />
 
               </div>
