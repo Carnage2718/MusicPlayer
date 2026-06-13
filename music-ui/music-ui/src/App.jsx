@@ -8,6 +8,7 @@ import HomeScreen from "./screens/HomeScreen"
 import SearchScreen from "./screens/SearchScreen"
 import LibraryScreen from "./screens/LibraryScreen"
 import SongsScreen from "./screens/SongsScreen"
+import SongScreen from "./screens/SongScreen"
 import PlaylistsScreen from "./screens/PlaylistsScreen"
 import PlaylistScreen from "./screens/PlaylistScreen"
 import CreatePlaylistScreen from "./screens/CreatePlaylistScreen"
@@ -42,6 +43,11 @@ function AppContent() {
   const [selectedAlbum, setSelectedAlbum] = useState(null)
   const [selectedPlaylist, setSelectedPlaylist] = useState(null)
   const [isFullPlayer, setIsFullPlayer] = useState(false)
+
+  const openSong = (s) => {
+    setSelectedSong(s)
+    setCurrentScreen("song")
+  }
 
   const openArtist = (a) => {
     setSelectedArtist(a)
@@ -101,6 +107,18 @@ function AppContent() {
           <SongsScreen
             onSelectSong={playSong}
             onOpenArtist={openArtist}
+          />
+        )
+
+      case "song":
+        
+        return(
+          <SongScreen
+            song={selectedSong}
+            onSelectSong={playSong}
+            onOpenArtist={openArtist}
+            onOpenAlbum={openAlbum}
+            onOpenPlaylist={openPlaylist}
           />
         )
       
@@ -221,64 +239,70 @@ function AppContent() {
 
   return(
 
-    <div className="app-container">
+    <MenuProvider
+      onOpenSong={openSong}
+    >
 
-      <div className="screen-container">
+      <div className="app-container">
 
-        {renderScreen()}
+        <div className="screen-container">
+
+          {renderScreen()}
+
+        </div>
+
+        {/* MINI PLAYER */}
+
+        {currentSong && !isFullPlayer && (
+
+          <MiniPlayer
+            song={currentSong}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            onExpand={()=>setIsFullPlayer(true)}
+            onOpenArtist={openArtist}
+          />
+
+        )}
+
+        {/* BOTTOM NAV */}
+
+        <BottomNav
+          currentScreen={currentScreen}
+          setCurrentScreen={setCurrentScreen}
+          onExpand={()=>setIsFullPlayer(true)}
+          onOpenArtist={openArtist}
+          progress={progress}
+          song={currentSong}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+        />
+
+        {/* FULL PLAYER */}
+
+        {currentSong && isFullPlayer &&(
+
+          <FullPlayer
+            song={currentSong}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            progress={progress}
+            onClose={()=>setIsFullPlayer(false)}
+            onOpenArtist={openArtist}
+          />
+
+        )}
 
       </div>
 
-      {/* MINI PLAYER */}
-
-      {currentSong && !isFullPlayer && (
-
-        <MiniPlayer
-          song={currentSong}
-          isPlaying={isPlaying}
-          setIsPlaying={setIsPlaying}
-          onExpand={()=>setIsFullPlayer(true)}
-          onOpenArtist={openArtist}
-        />
-
-      )}
-
-      {/* BOTTOM NAV */}
-
-      <BottomNav
-        currentScreen={currentScreen}
-        setCurrentScreen={setCurrentScreen}
-        onExpand={()=>setIsFullPlayer(true)}
-        onOpenArtist={openArtist}
-        progress={progress}
-        song={currentSong}
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-      />
-
-      {/* FULL PLAYER */}
-
-      {currentSong && isFullPlayer &&(
-
-        <FullPlayer
-          song={currentSong}
-          isPlaying={isPlaying}
-          setIsPlaying={setIsPlaying}
-          progress={progress}
-          onClose={()=>setIsFullPlayer(false)}
-          onOpenArtist={openArtist}
-        />
-
-      )}
-
-    </div>
+    </MenuProvider>
 
   )
 }
 
 export default function App() {
   const token =
-  localStorage.getItem("token")
+    localStorage.getItem("token")
 
   if(!token){
     return <LoginScreen/>
@@ -286,9 +310,7 @@ export default function App() {
 
   return (
     <SongsProvider>
-      <MenuProvider>
-        <AppContent />
-      </MenuProvider>
+      <AppContent/>
     </SongsProvider>
   )
 }

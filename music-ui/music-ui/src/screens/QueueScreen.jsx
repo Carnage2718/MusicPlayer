@@ -211,6 +211,7 @@ export default function QueueScreen({
                     }}
                     onSelectSong={() => playSong(song)}
                     onOpenArtist={onOpenArtist}
+                    showMenu={false}
                   />
                 </div>
 
@@ -242,6 +243,7 @@ export default function QueueScreen({
                   url: currentSong?.url
                 }}
                 onOpenArtist={onOpenArtist}
+                showMenu={false}
               />
 
             </div>
@@ -319,6 +321,7 @@ export default function QueueScreen({
                     }}
                     onSelectSong={() => playSong(song)}
                     onOpenArtist={onOpenArtist}
+                    showMenu={false}
                   />
                 </div>
 

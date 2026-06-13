@@ -1,0 +1,164 @@
+.song-screen{
+
+  width:100%;
+  height:100%;
+
+  overflow-y:auto;
+
+  padding-bottom:120px;
+
+}
+
+.song-content{
+
+  padding:12px;
+
+}
+
+.song-grab-wrapper{
+
+  position:sticky;
+  top:0;
+
+  height:72px;
+
+  display:flex;
+  justify-content:center;
+
+  padding-top:14px;
+
+  z-index:50;
+
+}
+
+.song-section{
+
+  margin-top:24px;
+
+}
+
+.song-section-header{
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+}
+
+.song-section-title{
+
+  font-size:14px;
+  font-weight:600;
+
+  color:#aaa;
+
+  margin-bottom:10px;
+
+}
+
+.song-expand{
+
+  background:none;
+  border:none;
+
+  color:#1db954;
+
+  font-size:20px;
+
+}
+
+.song-none{
+
+  color:#666;
+  font-size:14px;
+
+}
+
+.genre-preview{
+
+  display:flex;
+  gap:10px;
+
+  color:#ddd;
+
+  flex-wrap:wrap;
+
+}
+
+.genre-list{
+
+  display:flex;
+  flex-wrap:wrap;
+
+  gap:10px;
+
+}
+
+.genre-chip{
+
+  padding:8px 14px;
+
+  border-radius:999px;
+
+  background:#2a2a2a;
+
+  color:white;
+
+  font-size:13px;
+
+}
+
+.song-link{
+
+  cursor:pointer;
+
+  color:white;
+
+}
+
+.song-link:hover{
+
+  color:#1db954;
+
+}
+
+.playlist-list{
+
+  display:flex;
+  flex-direction:column;
+
+  gap:12px;
+
+}
+
+.playlist-row{
+
+  display:flex;
+  align-items:center;
+
+  gap:12px;
+
+  cursor:pointer;
+
+}
+
+.playlist-row img{
+
+  width:56px;
+  height:56px;
+
+  object-fit:cover;
+
+  border-radius:8px;
+
+}
+
+.lyrics-box{
+
+  white-space:pre-wrap;
+
+  line-height:1.8;
+
+  color:#ddd;
+
+}

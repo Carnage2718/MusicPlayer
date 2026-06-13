@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import { Music } from "lucide-react"
+import { Music, MoreHorizontal } from "lucide-react"
 import "./SongCard.css"
 import ArtistLinks from "./ArtistLinks"
 import TextScroller from "./TextScroller"
@@ -9,41 +9,28 @@ export default function SongCard({
   song,
   onSelectSong,
   onOpenArtist,
-  onLongPress
+  onOpenSong,
+  showMenu = true
 }) {
   const { openMenu } = useMenu()
-  const lastTap = useRef(0)
-  const tapTimeout = useRef(null)
-
 
   /* =========================
      SONG CLICK
   ========================= */
+ const handleClick = () => {
+  onSelectSong?.(song)
+ }
 
-  const handleClick = (e) => {
+ const handleMenuClick = (e) => {
+    e.stopPropagation()
 
-    const now = Date.now()
+    const rect =
+      e.currentTarget.getBoundingClientRect()
 
-    if (now - lastTap.current < 300) {
-
-      clearTimeout(tapTimeout.current)
-      // ダブルタップ
-      const rect = e.currentTarget.getBoundingClientRect()
-
-      openMenu(song, {
-        x: rect.right,
-        y: rect.bottom
-      })
-
-      lastTap.current = 0
-      return
-    }
-
-    lastTap.current = now
-
-    tapTimeout.current = setTimeout(() => {
-      onSelectSong?.(song)
-    }, 300)
+    openMenu(song,{
+      x: rect.right,
+      y: rect.bottom
+    })
   }
 
   /* =========================
@@ -121,6 +108,17 @@ export default function SongCard({
 
         </div>
       </div>
+
+      {showMenu && (
+
+        <button
+          className="song-menu-btn"
+          onClick={handleMenuClick}
+        >
+          <MoreHorizontal size={18}/>
+        </button>
+
+      )}
 
     </div>
 

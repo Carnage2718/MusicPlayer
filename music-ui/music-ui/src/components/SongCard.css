@@ -116,3 +116,24 @@
   color:#1db954;
 
 }
+
+.song-menu-btn{
+
+  flex-shrink:0;
+
+  width:36px;
+  height:36px;
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+  background:none;
+  border:none;
+
+  color:#888;
+}
+
+.song-menu-btn:hover{
+  color:#fff;
+}

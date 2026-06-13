@@ -157,6 +157,27 @@ def list_recent_songs(limit: int = 50):
         for r in rows
     ]
 
+@router.get("/genres")
+def get_genres():
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, name
+        FROM genres
+        ORDER BY name ASC
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return [
+        {"genres_id": r[0], "name": r[1]}
+        for r in rows
+    ]
 
 @router.get("/{song_id}")
 def get_song_detail(song_id: int):
@@ -472,29 +493,6 @@ def delete_favorite_type(favorite_type_id: int):
 
     return {"message": "Favorite type deleted"}
 
-
-@router.get("/genres")
-def get_genres():
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT id, name
-        FROM genres
-        ORDER BY name ASC
-    """)
-
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return [
-        {"genres_id": r[0], "name": r[1]}
-        for r in rows
-    ]
-
 @router.post("/{song_id}/genres")
 def set_song_genres(song_id: int, data: GenreUpdate):
 
@@ -550,4 +548,181 @@ def get_songs_by_genre(genre_ids: str):
         {"song_id": r[0], "title": r[1]}
         for r in rows
     ]
+
+@router.get("/{song_id}/screen")
+def get_song_screen(
+    song_id: int,
+    user_id: int = Depends(get_current_user)
+):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+
+        # =========================
+        # SONG
+        # =========================
+
+        cur.execute("""
+            SELECT
+                s.id,
+                s.title,
+                s.cover_url,
+                s.album_id
+            FROM songs s
+            WHERE s.id = %s
+        """, (song_id,))
+
+        row = cur.fetchone()
+
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail="Song not found"
+            )
+
+        song = {
+            "id": row[0],
+            "title": row[1],
+            "cover_url": row[2],
+            "album_id": row[3]
+        }
+
+        # =========================
+        # ARTISTS
+        # =========================
+
+        cur.execute("""
+            SELECT
+                a.id,
+                a.name,
+                sa.role
+            FROM song_artists sa
+            JOIN artists a
+                ON a.id = sa.artist_id
+            WHERE sa.song_id = %s
+            ORDER BY
+                CASE
+                    WHEN sa.role='main' THEN 0
+                    ELSE 1
+                END,
+                a.name
+        """, (song_id,))
+
+        artists = []
+
+        for artist_id, name, role in cur.fetchall():
+
+            artists.append({
+                "id": artist_id,
+                "name": name,
+                "role": role
+            })
+
+        # =========================
+        # GENRES
+        # =========================
+
+        cur.execute("""
+            SELECT
+                g.id,
+                g.name
+            FROM song_genres sg
+            JOIN genres g
+                ON g.id = sg.genre_id
+            WHERE sg.song_id = %s
+            ORDER BY g.name
+        """, (song_id,))
+
+        genres = []
+
+        for genre_id, name in cur.fetchall():
+
+            genres.append({
+                "id": genre_id,
+                "name": name
+            })
+
+        # =========================
+        # ALBUM
+        # =========================
+
+        album = None
+
+        if song["album_id"]:
+
+            cur.execute("""
+                SELECT
+                    id,
+                    name
+                FROM albums
+                WHERE id = %s
+            """, (song["album_id"],))
+
+            row = cur.fetchone()
+
+            if row:
+
+                album = {
+                    "id": row[0],
+                    "name": row[1]
+                }
+
+        # =========================
+        # PLAYLISTS (USER ONLY)
+        # =========================
+
+        cur.execute("""
+            SELECT
+                p.id,
+                p.name,
+                p.cover_url
+            FROM playlist_songs ps
+            JOIN playlists p
+                ON p.id = ps.playlist_id
+            WHERE
+                ps.song_id = %s
+                AND p.user_id = %s
+            ORDER BY p.name
+        """, (
+            song_id,
+            user_id
+        ))
+
+        playlists = []
+
+        for playlist_id, name, cover_url in cur.fetchall():
+
+            playlists.append({
+                "id": playlist_id,
+                "name": name,
+                "image": build_cover_url(cover_url)
+            })
+
+        # =========================
+        # RESPONSE
+        # =========================
+
+        return {
+
+            "id": song["id"],
+            "title": song["title"],
+            "image": build_cover_url(song["cover_url"]),
+
+            "artists": artists,
+
+            "genres": genres,
+
+            "album": album,
+
+            "playlists": playlists
+
+        }
+
+    finally:
+
+        cur.close()
+        conn.close()
+
 

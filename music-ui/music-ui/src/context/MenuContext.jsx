@@ -4,7 +4,10 @@ const MenuContext = createContext()
 
 export const useMenu = () => useContext(MenuContext)
 
-export function MenuProvider({ children }) {
+export function MenuProvider({ 
+  children,
+onOpenSong
+}){
 
   const [menu, setMenu] = useState(null)
 
@@ -23,6 +26,7 @@ export function MenuProvider({ children }) {
           song={menu.song}
           position={menu.position}
           onClose={closeMenu}
+          onOpenSong={onOpenSong}
         />
       )}
 

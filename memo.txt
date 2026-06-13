@@ -32,8 +32,6 @@ DB_URL = "postgresql://musicplayer_db_p12q_user:NZdzhu4XBJAZ3YM9tysoaRhddDRFjaI2
 >>psqlの開け方
 (psql "postgresql://musicplayer_db_p12q_user:NZdzhu4XBJAZ3YM9tysoaRhddDRFjaI2@dpg-d68q4n4r85hc73d09elg-a.oregon-postgres.render.com/musicplayer_db_p12q")
 
-psql "postgresql://neondb_owner:npg_3YbkV9TiOLoe@ep-odd-term-ai11mw25-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-
 >>uvicornの開け方
 cd music-api
 python -m uvicorn app.main:app --reload
@@ -73,3 +71,8 @@ git push
 localStorage.removeItem("token")
 localStorage.removeItem("user_id")
 location.reload()
+
+
+DB
+songs
+id/ title/ normalized_title/ stream_url/ file_hash/ play_count/ explicit/ created_at/ update_at/ album_id/ bitrate/ track_number/ cover_url/ song_type

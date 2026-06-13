@@ -1,0 +1,107 @@
+.editor-overlay{
+
+  position:fixed;
+
+  top:72px;
+  left:0;
+  right:0;
+
+  bottom:170px;
+
+  background:rgba(0,0,0,.75);
+
+  z-index:150;
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+}
+
+.editor-modal{
+
+  width:min(92%,500px);
+
+  max-height:80vh;
+
+  display:flex;
+  flex-direction:column;
+
+  background:#121212;
+
+  border-radius:24px;
+
+  overflow:hidden;
+
+}
+
+.editor-title{
+
+  font-size:20px;
+  font-weight:700;
+
+  margin-bottom:20px;
+
+}
+
+.genre-selector{
+
+  flex:1;
+
+  overflow-y:auto;
+
+  padding:24px;
+
+  display:flex;
+  flex-wrap:wrap;
+
+  gap:12px;
+
+  scrollbar-width:none;
+
+  -ms-overflow-style:none;
+
+}
+
+.genre-pill{
+
+  border:none;
+
+  padding:10px 16px;
+
+  border-radius:999px;
+
+  background:#2a2a2a;
+
+  color:white;
+
+}
+
+.genre-pill.active{
+
+  background:#1db954;
+  color:black;
+
+}
+
+.editor-confirm{
+
+  flex-shrink:0;
+
+  margin:16px 24px 24px;
+
+  width:calc(100% - 48px);
+
+  height:52px;
+
+  border:none;
+
+  border-radius:999px;
+
+  background:#1db954;
+
+  color:black;
+
+  font-weight:700;
+
+}
