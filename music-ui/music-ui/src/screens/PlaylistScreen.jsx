@@ -352,6 +352,7 @@ export default function PlaylistScreen({
                   song={song}
                   onSelectSong={()=>addToPlaylist(song.id)}
                   onOpenArtist={onOpenArtist}
+                  showmenu=false
                 />
               </div>
             ))}
