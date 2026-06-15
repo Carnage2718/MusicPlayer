@@ -53,10 +53,8 @@ export default function PlaylistsScreen({
   return(
     <div className="screen">
 
-      {/* ✅ ヘッダーは1つだけ */}
       <AppHeader title="Playlists"/>
 
-      {/* ✅ Albumsと同じ位置にボタン */}
       <div className="playlists-create-wrap">
         <button
           className="playlists-create-btn"

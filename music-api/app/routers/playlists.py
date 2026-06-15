@@ -296,7 +296,7 @@ def add_song_to_playlist(
             FROM playlists 
             WHERE id = %s
             AND user_id=%s
-        """, (playlist_id,))
+        """, (playlist_id, user))
 
         if not cur.fetchone():
             return {"error": "Playlist not found"}

@@ -2,19 +2,17 @@
 
   position:fixed;
 
-  top:72px;
-  left:0;
-  right:0;
+  inset:0;
 
-  bottom:170px;
+  background:rgba(0,0,0,.8);
 
-  background:rgba(0,0,0,.75);
-
-  z-index:150;
+  z-index:300;
 
   display:flex;
   justify-content:center;
-  align-items:center;
+  align-items:flex-start;
+
+  padding-top:76px;
 
 }
 
@@ -22,7 +20,8 @@
 
   width:min(92%,500px);
 
-  max-height:80vh;
+  height:calc(100vh - 254px);
+  max-height:none;
 
   display:flex;
   flex-direction:column;
@@ -39,8 +38,8 @@
 
   font-size:20px;
   font-weight:700;
-
-  margin-bottom:20px;
+  padding:24px 24px 6px;
+  margin:0;
 
 }
 
@@ -50,7 +49,7 @@
 
   overflow-y:auto;
 
-  padding:24px;
+  padding:20px 24px 24px;
 
   display:flex;
   flex-wrap:wrap;
@@ -61,6 +60,10 @@
 
   -ms-overflow-style:none;
 
+}
+
+.genre-selector::-webkit-scrollbar{
+  display:none;
 }
 
 .genre-pill{
@@ -88,7 +91,7 @@
 
   flex-shrink:0;
 
-  margin:16px 24px 24px;
+  margin:6px 24px 6px;
 
   width:calc(100% - 48px);
 
@@ -103,5 +106,23 @@
   color:black;
 
   font-weight:700;
+
+}
+
+.genre-loading{
+
+  width:100%;
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:flex-start;
+
+  padding-top:20px;
+
+  color:#aaa;
+
+  font-size:16px;
 
 }

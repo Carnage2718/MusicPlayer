@@ -1,38 +1,35 @@
 import { useState, useEffect, useRef } from "react"
+import { Music } from "lucide-react"
 import API_BASE, { authfetch }from "../api"
 import AppHeader from "../components/AppHeader"
-import "./CreatePlaylistScreen.css"
-import { Music } from "lucide-react"
 import SongCard from "../components/SongCard"
+import SearchPicker from "../components/SearchPicker"
+import "./CreatePlaylistScreen.css"
 
 export default function CreatePlaylistScreen({ onBack, initialSong }) {
 
   const [name,setName] = useState("")
-  const [songQuery,setSongQuery] = useState("")
   const [tracks,setTracks] = useState(
-    initialSong 
+    initialSong
     ? [{
-      song_id: initialSong.id || initialSong.song_id,
-      title: initialSong.title
-    }]
+        song_id: initialSong.id || initialSong.song_id,
+        title: initialSong.title,
+        image: initialSong.image,
+        artists: initialSong.artists,
+        main: initialSong.main,
+        ft: initialSong.ft,
+        url: initialSong.url
+      }]
     : []
   )
-  const [artistFilter,setArtistFilter] = useState("")
-  const [songResults,setSongResults] = useState([])
-  const [selectedSong,setSelectedSong] = useState(null)
-  const [highlightIndex,setHighlightIndex] = useState(0)
-  const [lockSearch, setLockSearch] = useState(false)
-
-  const songRef = useRef()
-  const artistRef = useRef()
-  const addBtnRef = useRef()
+  
   const fileRef = useRef()
-  const resultRefs = useRef([])
-  const containerRef = useRef()
 
   const [coverFile,setCoverFile] = useState(null)
   const [coverUrl,setCoverUrl] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
+
+  const [showSongPicker,setShowSongPicker] = useState(false)
 
 
   useEffect(()=>{
@@ -94,128 +91,16 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
       img.src = url
     })
   }
-  /* =========================
-     SEARCH
-  ========================= */
 
-  useEffect(()=>{
-    if(lockSearch) return
-
-    if(songQuery || artistFilter){
-      fetch(`${API_BASE}/search/song/advanced?q=${songQuery}&artist=${artistFilter}`)
-        .then(r=>r.json())
-        .then(data=>{
-          setSongResults(data)
-          setHighlightIndex(0)
-        })
-    }else{
-      setSongResults([])
-    }
-  },[songQuery,artistFilter])
-
-  /* =========================
-     KEY CONTROL（🔥 Albumと同じ）
-  ========================= */
-
-  const handleKey = (e, list, onSelect, nextRef)=>{
-
-    if(e.key === "Tab"){
-
-      if(!list.length) return
-
-      e.preventDefault()
-      e.stopPropagation()
-
-      setHighlightIndex(prev => {
-        const next = (prev + 1) % list.length
-
-        setTimeout(()=>{
-          resultRefs.current[next]?.focus()
-        },0)
-
-        return next
-      })
-    }
-
-    if(e.key === "Enter"){
-      e.preventDefault()
-
-      const selected = list[highlightIndex] || list[0]
-
-      if(selected){
-        onSelect(selected)
-      }
-
-      if(nextRef){
-        setTimeout(()=> nextRef.current?.focus(),0)
-      }
-    }
-  }
-  /* =========================
-     SELECT
-  ========================= */
-
-  const selectSong = (s)=>{
-    setLockSearch(true)
-
-    setSongQuery("")
-    setSelectedSong(null)
-
-    setTracks(prev => {
-      if(prev.find(t => t.song_id === s.id)) return prev
-
-      return [
-        ...prev,
-        {
-          song_id: s.id,
-          title: s.title
-        }
-      ]
-    })
-
-    setSongResults([])
-
-    setTimeout(()=>{
-      setLockSearch(false)
-
-      // 🔥ここでフォーカス（超重要）
-      songRef.current?.focus()
-    },0)
-  }
-
-  /* =========================
-     ADD SONG
-  ========================= */
-
-  const addSong = ()=>{
-
-    if(!selectedSong) return
-
-    if(tracks.find(t => t.song_id === selectedSong.id)) return
-
-    setTracks([
-      ...tracks,
-      {
-        song_id: selectedSong.id,
-        title: selectedSong.title
-      }
-    ])
-
-    setSelectedSong(null)
-    setSongQuery("")
-    setSongResults([])
-
-    setTimeout(()=> songRef.current?.focus(),0)
-  }
 
   /* =========================
      REMOVE
   ========================= */
 
   const removeSong = (i)=>{
-    const updated = [...tracks]
-    updated.splice(i,1)
-    setTracks(updated)
+    setTracks(prev =>
+      prev.filter((_,index)=> index !== i)
+    )
   }
 
   /* =========================
@@ -270,7 +155,7 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
   ========================= */
 
   return(
-    <div className="screen" ref={containerRef}>
+    <div className="screen">
 
       <AppHeader title="Create Playlist" onBack={onBack}/>
 
@@ -286,35 +171,13 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
               onChange={e=>setName(e.target.value)}
             />
 
-            <input
-              ref={songRef}
-              placeholder="Search song..."
-              value={songQuery}
-              onChange={e=>setSongQuery(e.target.value)}
-              onKeyDown={(e)=>handleKey(e,songResults,selectSong,addBtnRef)}
-            />
-
-            <input
-              ref={artistRef}
-              placeholder="Filter by artist"
-              value={artistFilter}
-              onChange={e=>setArtistFilter(e.target.value)}
-              onKeyDown={(e)=>handleKey(e,songResults,selectSong,addBtnRef)}
-            />
-
             <button
-              ref={addBtnRef}
               className="add-btn"
-              disabled={!selectedSong}
-              onClick={addSong}
-              onKeyDown={(e)=>{
-                if(e.key === "Enter"){
-                  e.preventDefault()
-                  addSong()
-                }
-              }}
+              onClick={()=>
+                setShowSongPicker(true)
+              }
             >
-              ADD
+              ADD SONG
             </button>
 
           </div>
@@ -363,57 +226,82 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
 
           </div>
 
-            
-          {/* SEARCH RESULT */}
-          {songResults.length > 0 && (
-            <div className="search-result">
-
-              {songResults.map((s,i)=>(
-                <div
-                  key={s.id}
-                  ref={el => resultRefs.current[i] = el}
-                  tabIndex={0}
-                  onFocus={()=>setHighlightIndex(i)}
-                  onClick={()=>selectSong(s)}
-                  onKeyDown={(e)=>{
-                    if(e.key === "Enter"){
-                      e.preventDefault()
-                      selectSong(s)
-                    }
-                  }}
-                  className={`search-item ${i === highlightIndex ? "selected" : ""}`}
-                >
-                  <SongCard
-                    song={{
-                      id: s.id,
-                      title: s.title,
-                      main: s.main,
-                      ft: s.ft ? s.ft.split(", ") : [],
-                      artists: s.artists || [],
-                      image: s.image,
-                      url: s.url
-                    }}
-                  />
-                </div>
-              ))}
-
-            </div>
-          )}
-
         </div>
 
 
         {/* TRACK */}
         <div className="track-list">
           {tracks.map((t,i)=>(
-            <div key={i} className="track-item">
-              <span>{t.title}</span>
-              <div onClick={()=>removeSong(i)}>✕</div>
+            <div key={`track-${t.song_id}-${i}`} className="track-item">
+              <SongCard
+                song={{
+                  id: t.song_id,
+                  title: t.title,
+                  image: t.image,
+                  artists: t.artists,
+                  main: t.main,
+                  ft: t.ft,
+                  url: t.url
+                }}
+                showMenu={false}
+              />  
+
+              <button
+                className="track-remove"
+               onClick={()=>removeSong(i)}
+              >
+                ✕
+              </button>
+
             </div>
+
           ))}
+
         </div>
 
       </div>
+
+      <SearchPicker
+
+        open={showSongPicker}
+
+        type="song"
+
+        title="Add Song"
+
+        onClose={()=>
+          setShowSongPicker(false)
+        }
+
+        onSelect={(song)=>{
+
+          setTracks(prev=>{
+
+            if(
+              prev.some(
+                t => t.song_id === song.id
+              )
+            ){
+              return prev
+            }
+
+            return [
+              ...prev,
+              {
+                song_id: song.id,
+                title: song.title,
+                image: song.image,
+                main: song.main,
+                ft: song.ft,
+                artists: song.artists,
+                url: song.url
+              }
+            ]
+          })
+
+        }}
+
+      />
 
     </div>
   )

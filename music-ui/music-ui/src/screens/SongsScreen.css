@@ -162,3 +162,69 @@
   opacity:0.8;
 
 }
+
+.songscreen-album-card{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:14px;
+
+  padding:12px;
+
+  border-radius:16px;
+
+  background:#181818;
+
+  cursor:pointer;
+
+  transition:.2s;
+
+}
+
+.songscreen-album-card:hover{
+
+  background:#202020;
+
+}
+
+.songscreen-album-card img{
+
+  width:72px;
+
+  height:72px;
+
+  border-radius:12px;
+
+  object-fit:cover;
+
+  flex-shrink:0;
+
+}
+
+.songscreen-album-info{
+
+  min-width:0;
+
+}
+
+.songscreen-album-name{
+
+  font-size:16px;
+
+  font-weight:700;
+
+  color:white;
+
+}
+
+.songscreen-album-subtitle{
+
+  margin-top:4px;
+
+  font-size:13px;
+
+  color:#888;
+
+}

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react"
 import { Play, Shuffle, GripVertical } from "lucide-react"
-import AppHeader from "../components/AppHeader"
-import "./PlaylistScreen.css"
-import SongCard from "../components/SongCard"
 import API_BASE, {authfetch} from "../api"
+import AppHeader from "../components/AppHeader"
+import SongCard from "../components/SongCard"
+import SearchPicker from "../components/SearchPicker"
 import { useSongs } from "../context/SongsContext"
+import "./PlaylistScreen.css"
+
 
 export default function PlaylistScreen({
   playlist,
@@ -13,11 +15,8 @@ export default function PlaylistScreen({
 }){
 
   const [tracks,setTracks] = useState([])
-  const [isShuffle, setIsShuffle] = useState(true)
+  const [isShuffle, setIsShuffle] = useState(true) 
   const [showAddModal, setShowAddModal] = useState(false)
-  const [searchResults, setSearchResults] = useState([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedIndex, setSelectedIndex] = useState(0)
   const [dragIndex, setDragIndex] = useState(null)
   const [hoverIndex, setHoverIndex] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -53,19 +52,6 @@ export default function PlaylistScreen({
     fetchPlaylist()
   },[playlist])
 
-  useEffect(()=>{
-    const timer = setTimeout(()=>{
-      if(searchQuery){
-        searchSongs(searchQuery)
-      }
-    },300)
-
-    return ()=>clearTimeout(timer)
-  },[searchQuery])
-
-  useEffect(()=>{
-    setSelectedIndex(0)
-  },[searchResults])
 
   useEffect(()=>{
     const handleGlobalUp = ()=> handleDrop()
@@ -78,13 +64,6 @@ export default function PlaylistScreen({
       window.removeEventListener("touchend", handleGlobalUp)
     }
   },[dragIndex, hoverIndex])
-
-  useEffect(()=>{
-    const el = document.querySelector(".search-results .active")
-    el?.scrollIntoView({
-      block:"nearest"
-    })
-  },[selectedIndex])
 
   useEffect(()=>{
 
@@ -103,17 +82,6 @@ export default function PlaylistScreen({
   },[isDragging])
 
   useEffect(()=>{
-    const handleTouchStart = (e)=>{
-      if(isDragging){
-        e.preventDefault()
-      }
-    }
-    return ()=>{
-      window.removeEventListener("touchstart", handleTouchStart)
-    }
-  },[isDragging])
-
-  useEffect(()=>{
     const up = ()=> handleDrop()
 
     window.addEventListener("touchend", up)
@@ -122,27 +90,6 @@ export default function PlaylistScreen({
       window.removeEventListener("touchend", up)
     }
   },[dragIndex, hoverIndex])
-
-  const handleKeyDown = async (e)=>{
-    if(e.key === "ArrowDown"){
-      setSelectedIndex(prev => 
-        Math.min(prev + 1, searchResults.length - 1)
-      )
-    }
-
-    if(e.key === "ArrowUp"){
-      setSelectedIndex(prev => 
-        Math.max(prev - 1, 0)
-      )
-    }
-
-    if(e.key === "Enter"){
-      if(searchResults[selectedIndex]){
-        await addToPlaylist(searchResults[selectedIndex].id)
-      }
-      e.preventDefault()
-    }
-  }
 
   /* =========================
      PLAY ALL
@@ -161,6 +108,22 @@ export default function PlaylistScreen({
   }
 
   /* =========================
+     RELOAD PLAYLIST
+  ========================= */  
+
+  const reloadPlaylist = async ()=>{
+
+    const res =
+      await authfetch(`/playlists/${playlist.id}`)
+
+    const data =
+      await res.json()
+
+    setTracks(data.songs || [])
+
+  }
+
+  /* =========================
      ADD SONG
   ========================= */
   const addToPlaylist = async (songId)=>{
@@ -173,25 +136,13 @@ export default function PlaylistScreen({
         method:"POST"
       })
 
-      const res = await authfetch(`/playlists/${playlist.id}`)
-      const data = await res.json()
-      setTracks(data.songs || [])
-
-      // 入力だけリセット
-      setSearchQuery("")
-      setSelectedIndex(0)
+      await reloadPlaylist()
 
     }catch(e){
       console.error(e)
     }finally{
       setIsAdding(false)
     }
-  }
-
-  const searchSongs = async (q)=>{
-    const res = await authfetch(`/search/song?q=${q}`)
-    const data = await res.json()
-    setSearchResults(data)
   }
 
   /* =========================
@@ -202,9 +153,7 @@ export default function PlaylistScreen({
       method:"DELETE"
     })
 
-    const res = await authfetch(`/playlists/${playlist.id}`)
-    const data = await res.json()
-    setTracks(data.songs || [])
+    await reloadPlaylist()
 
   }
 
@@ -214,7 +163,12 @@ export default function PlaylistScreen({
   const handleDrop = async ()=>{
     if(dragIndex === null) return
 
-    const targetIndex = hoverIndex ?? dragIndex
+    const targetIndex =
+      hoverIndex == null
+        ? dragIndex
+        : hoverIndex > dragIndex
+          ? hoverIndex - 1
+          : hoverIndex
 
     const updated = [...tracks]
     const [moved] = updated.splice(dragIndex,1)
@@ -251,13 +205,6 @@ export default function PlaylistScreen({
     }
   }
 
-  const isBelowHero = (clientY)=>{
-    const hero = document.querySelector(".playlist-hero")
-    if(!hero) return true
-
-    const rect = hero.getBoundingClientRect()
-    return clientY > rect.bottom
-  }
 
   return(
     <div className="screen playlist-container">
@@ -311,16 +258,7 @@ export default function PlaylistScreen({
 
             <button
               className={`playlist-add ${showAddModal ? "active" : ""}`}
-              onClick={()=>{
-                if(showAddModal){
-                  // 🔥 閉じる
-                  setShowAddModal(false)
-                  setSearchQuery("")
-                  setSearchResults([])
-                }else{
-                  setShowAddModal(true)
-                }
-              }}
+              onClick={()=>setShowAddModal(prev => !prev)}
               disabled={isAdding}
             >
               {isAdding ? "Adding..." : "+ Add"}
@@ -332,34 +270,6 @@ export default function PlaylistScreen({
 
       </div>
 
-      {showAddModal && (
-        <div className="add-modal">
-
-           <input
-            placeholder="Search songs..."
-            value={searchQuery}
-            onChange={(e)=>setSearchQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-
-          <div className="search-results">
-            {searchResults.map((song, i)=>(
-              <div
-                key={song.id}
-                className={i === selectedIndex ? "active" : ""}
-              >
-                <SongCard
-                  song={song}
-                  onSelectSong={()=>addToPlaylist(song.id)}
-                  onOpenArtist={onOpenArtist}
-                  showmenu=false
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* =========================
          TRACK LIST
       ========================= */}
@@ -368,10 +278,11 @@ export default function PlaylistScreen({
 
 
         {tracks.map((t,i)=>(
-          <div className="playlist-track-wrapper" key={t.id}>
+          <div className="playlist-track-wrapper" 
+            key={t.id}
+          >
               
             <div
-              key={t.id}
               ref={dragIndex === i ? dragRef : null}
               className={`playlist-track ${
                 dragIndex === i ? "dragging" : ""
@@ -483,7 +394,7 @@ export default function PlaylistScreen({
                   }}
                   onSelectSong={()=>onSelectSong(t, tracks)}
                   onOpenArtist={onOpenArtist}
-                  showmenu=false
+                  showMenu={false}
                 />
 
               </div>
@@ -522,6 +433,28 @@ export default function PlaylistScreen({
         ))}
 
       </div>
+
+      <SearchPicker
+
+        open={showAddModal}
+
+        type="song"
+
+        title="Add Song"
+
+        onClose={()=>
+          setShowAddModal(false)
+        }
+
+        onSelect={(song)=>{
+
+          addToPlaylist(song.id)
+
+        }}
+
+        onOpenArtist={onOpenArtist}
+
+      />
 
     </div>
   )

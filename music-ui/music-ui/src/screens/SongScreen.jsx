@@ -59,6 +59,23 @@ export default function SongScreen({
   const genres = data?.genres || []
   const playlists = data?.playlists || []
 
+  const formatArtists = (artists = []) => {
+
+    const main = artists
+      .filter(a => a.role === "main")
+      .map(a => a.name)
+
+    const ft = artists
+      .filter(a => a.role === "featuring")
+      .map(a => a.name)
+
+    if(ft.length){
+      return `${main.join(", ")} ft. ${ft.join(", ")}`
+    }
+
+    return main.join(", ")
+  }
+
   return (
 
     <div className={`song-screen ${embedded ? "embedded" : ""}`}>
@@ -141,10 +158,26 @@ export default function SongScreen({
             </div>
 
             <div
-              className="song-link"
+              className="songscreen-album-card"
               onClick={() => onOpenAlbum?.(data.album)}
             >
-              {data.album.name}
+              <img
+                src={data.album.image}
+                alt={data.album.name}
+              />
+
+              <div className="songscreen-album-info">
+
+                <div className="songscreen-album-name">
+                  {data.album.name}
+                </div>
+
+                <div className="songscreen-album-artist">
+                  {formatArtists(data.album.artists)}
+                </div>
+
+              </div>
+
             </div>
 
           </div>
@@ -188,10 +221,19 @@ export default function SongScreen({
                   alt={p.name}
                 />
 
-                <span>{p.name}</span>
+                <div className="playlist-info">
+
+                  <div className="playlist-name">
+                    {p.name}
+                  </div>
+
+                  <div className="playlist-count">
+                    {p.song_count} songs
+                  </div>
+
+                </div>
 
               </div>
-
             ))}
 
           </div>

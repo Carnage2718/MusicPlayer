@@ -60,11 +60,15 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 cd music-ui\music-ui
 npm run dev -- --host
 
->>renderのpush and deploy
+>>githubへのpush
 
 git add .
 git commit -m ""
 git push
+
+>>githubとの同期
+
+git pull origin main
 
 
 >>log out

@@ -654,11 +654,36 @@ def get_song_screen(
 
             cur.execute("""
                 SELECT
-                    id,
-                    name
-                FROM albums
-                WHERE id = %s
-            """, (song["album_id"],))
+                    al.id,
+                    al.name,
+                    al.cover_url,
+
+                    COALESCE(
+                        JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'id', ar.id,
+                                'name', ar.name,
+                                'role', aa.role
+                            )
+                        ) FILTER (WHERE ar.id IS NOT NULL),
+                        '[]'
+                    ) AS artists
+
+                FROM albums al
+
+                LEFT JOIN album_artists aa
+                    ON aa.album_id = al.id
+
+                LEFT JOIN artists ar
+                    ON ar.id = aa.artist_id
+
+                WHERE al.id = %s
+
+                GROUP BY
+                    al.id,
+                    al.name,
+                    al.cover_url
+            """,(song["album_id"],))
 
             row = cur.fetchone()
 
@@ -666,7 +691,9 @@ def get_song_screen(
 
                 album = {
                     "id": row[0],
-                    "name": row[1]
+                    "name": row[1],
+                    "image": build_cover_url(row[2]),
+                    "artists": row[3] or []
                 }
 
         # =========================
@@ -677,27 +704,38 @@ def get_song_screen(
             SELECT
                 p.id,
                 p.name,
-                p.cover_url
+                p.cover_url,
+                COUNT(ps2.song_id)
+
             FROM playlist_songs ps
+
             JOIN playlists p
                 ON p.id = ps.playlist_id
+
+            LEFT JOIN playlist_songs ps2
+                ON ps2.playlist_id = p.id
+
             WHERE
                 ps.song_id = %s
                 AND p.user_id = %s
+
+            GROUP BY
+                p.id,
+                p.name,
+                p.cover_url
+
             ORDER BY p.name
-        """, (
-            song_id,
-            user_id
-        ))
+        """, (song_id, user_id))
 
         playlists = []
 
-        for playlist_id, name, cover_url in cur.fetchall():
+        for playlist_id, name, cover_url, count in cur.fetchall():
 
             playlists.append({
                 "id": playlist_id,
                 "name": name,
-                "image": build_cover_url(cover_url)
+                "image": build_cover_url(cover_url),
+                "song_count": count
             })
 
         # =========================

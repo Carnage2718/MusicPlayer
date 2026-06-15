@@ -214,6 +214,7 @@ export default function ArtistScreen({
               }}
               onSelectSong={onSelectSong}
               onOpenArtist={onOpenArtist}
+              showMenu={false}
             />
 
             <div className="artist-song-plays">

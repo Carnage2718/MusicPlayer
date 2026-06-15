@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { authfetch } from "../api"
+import PlaylistCard from "./PlaylistCard"
 import "./PlaylistEditor.css"
 
 export default function PlaylistEditor({
@@ -8,11 +9,9 @@ export default function PlaylistEditor({
   onSaved
 }){
 
-  const [playlists,setPlaylists] =
-    useState([])
-
-  const [selected,setSelected] =
-    useState([])
+  const [playlists,setPlaylists] = useState([])
+  const [selected,setSelected] = useState([])
+  const [loading,setLoading] = useState(true)
 
   useEffect(()=>{
 
@@ -23,6 +22,8 @@ export default function PlaylistEditor({
   const load = async()=>{
 
     try{
+
+      setLoading(true)
 
       const res =
         await authfetch("/playlists")
@@ -47,6 +48,10 @@ export default function PlaylistEditor({
     }catch(err){
 
       console.error(err)
+
+    }finally{
+
+      setLoading(false)
 
     }
 
@@ -135,26 +140,30 @@ export default function PlaylistEditor({
 
         <div className="playlist-selector">
 
-          {playlists.map(p=>(
+          {loading ? (
 
-            <button
-              key={p.id}
-              className={
-                selected.includes(p.id)
-                ? "playlist-pill active"
-                : "playlist-pill"
-              }
-              onClick={()=>
-                togglePlaylist(p.id)
-              }
-            >
-              {p.name}
-            </button>
+            <div className="playlist-loading">
+              loading...
+            </div>
 
-          ))}
+          ) : (
+            playlists.map(p => (
+              <div
+                key={p.id}
+                className={
+                  selected.includes(p.id)
+                    ? "playlist-item active"
+                    : "playlist-item"
+                }
+                onClick={() => togglePlaylist(p.id)}
+              >
+                <PlaylistCard playlist={p}/>
+              </div>
+            ))
 
+          )}
+          
         </div>
-
         <button
           className="playlist-editor-confirm"
           onClick={save}

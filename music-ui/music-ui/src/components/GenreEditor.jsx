@@ -11,6 +11,7 @@ export default function GenreEditor({
 
   const [genres,setGenres] = useState([])
   const [selected,setSelected] = useState([])
+  const [loading,setLoading] = useState(true)
 
   useEffect(()=>{
 
@@ -26,6 +27,8 @@ export default function GenreEditor({
 
       try{
 
+        setLoading(true)
+
         const res =
           await authfetch("/songs/genres")
 
@@ -37,6 +40,10 @@ export default function GenreEditor({
       }catch(err){
 
         console.error(err)
+
+      }finally{
+
+        setLoading(false)
 
       }
 
@@ -110,23 +117,32 @@ export default function GenreEditor({
 
         <div className="genre-selector">
 
-          {genres.map(g=>(
+          {loading ? (
 
-            <button
-              key={g.genres_id}
-              className={
-                selected.includes(g.genres_id)
-                ? "genre-pill active"
-                : "genre-pill"
-              }
-              onClick={()=>
-                toggleGenre(g.genres_id)
-              }
-            >
-              {g.name}
-            </button>
+            <div className="genre-loading">
+              Loading...
+            </div>
 
-          ))}
+          ) : (
+            genres.map(g=>(
+
+              <button
+                key={g.genres_id}
+                className={
+                  selected.includes(g.genres_id)
+                  ? "genre-pill active"
+                  : "genre-pill"
+                }
+                onClick={()=>
+                  toggleGenre(g.genres_id)
+                }
+              >
+                {g.name}
+              </button>
+
+            ))
+            
+          )}
 
         </div>
 
