@@ -57,8 +57,7 @@
 
   display:flex;
   gap:12px;
-
-  margin-bottom:24px;
+  margin-top: 8px;;
   align-items:center;
   justify-content:flex-start;
   flex-wrap:  wrap;
@@ -140,18 +139,19 @@
 
 /* TRACK */
 .playlist-tracks{
-  padding:16px;
+  padding:10px;
   touch-action:pan-y;
 }
 
 .playlist-track{
   display:flex;
-  background:#000;
+  background: #111;
   position:relative;
   z-index:1;
   align-items:center;
-  gap:10px;
+  gap:5px;
   transition: transform 0.2s ease;
+  border-radius: 10px;
 }
 
 .track-number{

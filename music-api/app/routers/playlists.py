@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Query, Depends
 from app.database import get_connection
 from app.routers.auth import get_current_user
-from app.models import PlaylistCreate
+from app.models import PlaylistCreate, PlaylistAddSongs
 from app.utils.url import build_cover_url
 from app.utils.cover import (
     generate_random_cover,
@@ -266,7 +266,7 @@ def get_playlist_detail(
 # =========================
 # ADD SONG
 # =========================
-@router.post("/{playlist_id}/add")
+@router.post("/{playlist_id}/add/one")
 def add_song_to_playlist(
     playlist_id: int,
     song_id: int = Query(...),
@@ -346,6 +346,88 @@ def add_song_to_playlist(
         conn.rollback()
         print("ADD PLAYLIST ERROR:", e)
         return {"error": str(e)}
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.post("/{playlist_id}/add/multi")
+def add_songs_to_playlist(
+    playlist_id: int,
+    data: PlaylistAddSongs,
+    user=Depends(get_current_user)
+):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+
+        cur.execute("""
+            SELECT id
+            FROM playlists
+            WHERE id=%s
+            AND user_id=%s
+        """,(playlist_id,user))
+
+        if not cur.fetchone():
+            return {"error":"Playlist not found"}
+
+        cur.execute("""
+            SELECT COALESCE(MAX(position),0)
+            FROM playlist_songs
+            WHERE playlist_id=%s
+            AND user_id=%s
+        """,(playlist_id,user))
+
+        position = cur.fetchone()[0]
+
+        added = []
+
+        for song_id in data.songs:
+
+            cur.execute("""
+                SELECT 1
+                FROM playlist_songs
+                WHERE playlist_id=%s
+                AND user_id=%s
+                AND song_id=%s
+            """,(playlist_id,user,song_id))
+
+            if cur.fetchone():
+                continue
+
+            position += 1
+
+            cur.execute("""
+                INSERT INTO playlist_songs
+                (
+                    user_id,
+                    playlist_id,
+                    song_id,
+                    position
+                )
+                VALUES(%s,%s,%s,%s)
+            """,(
+                user,
+                playlist_id,
+                song_id,
+                position
+            ))
+
+            added.append(song_id)
+
+        conn.commit()
+
+        return {
+            "success":True,
+            "added":added
+        }
+
+    except Exception as e:
+        conn.rollback()
+        return {"error":str(e)}
 
     finally:
         cur.close()

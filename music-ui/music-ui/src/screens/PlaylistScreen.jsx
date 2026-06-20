@@ -132,7 +132,7 @@ export default function PlaylistScreen({
     setIsAdding(true)
 
     try{
-      await authfetch(`/playlists/${playlist.id}/add?song_id=${songId}`,{
+      await authfetch(`/playlists/${playlist.id}/add/one?song_id=${songId}`,{
         method:"POST"
       })
 

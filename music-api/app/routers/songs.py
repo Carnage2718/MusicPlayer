@@ -135,7 +135,7 @@ def list_recent_songs(limit: int = 50):
         LEFT JOIN song_artists sa ON s.id = sa.song_id
         LEFT JOIN artists a ON sa.artist_id = a.id
         GROUP BY s.id
-        ORDER BY s.created_at DESC
+        ORDER BY s.updated_at DESC
         LIMIT %s
     """, (limit,))
 
@@ -185,7 +185,7 @@ def get_song_detail(song_id: int):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT id, title, stream_url, cover_url, created_at
+        SELECT id, title, stream_url, cover_url, release_at
         FROM songs
         WHERE id = %s;
     """, (song_id,))
@@ -225,7 +225,7 @@ def get_song_detail(song_id: int):
         "title": song[1],
         "stream_url": song[2],
         "cover": build_cover_url(song[3]),
-        "created_at": song[4],
+        "release_at": song[4],
         "artists": artists   # ← ここが最重要
     }
 
@@ -569,7 +569,8 @@ def get_song_screen(
                 s.id,
                 s.title,
                 s.cover_url,
-                s.album_id
+                s.album_id,
+                s.release_at
             FROM songs s
             WHERE s.id = %s
         """, (song_id,))
@@ -586,7 +587,8 @@ def get_song_screen(
             "id": row[0],
             "title": row[1],
             "cover_url": row[2],
-            "album_id": row[3]
+            "album_id": row[3],
+            "release_at": row[4]
         }
 
         # =========================
@@ -734,7 +736,7 @@ def get_song_screen(
             playlists.append({
                 "id": playlist_id,
                 "name": name,
-                "image": build_cover_url(cover_url),
+                "cover_url": build_cover_url(cover_url),
                 "song_count": count
             })
 
@@ -747,6 +749,8 @@ def get_song_screen(
             "id": song["id"],
             "title": song["title"],
             "image": build_cover_url(song["cover_url"]),
+
+            "release_at": song["release_at"],
 
             "artists": artists,
 

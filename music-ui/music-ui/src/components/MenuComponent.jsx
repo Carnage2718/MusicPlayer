@@ -67,7 +67,7 @@ export default function SongMenu({
             onClose()
           }}
         >
-          Open Song
+          Open Details
         </div>
 
         <div onClick={addNext}>

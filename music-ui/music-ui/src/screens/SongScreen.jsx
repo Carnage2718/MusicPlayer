@@ -10,6 +10,7 @@ import "./SongScreen.css"
 export default function SongScreen({
   song,
   embedded = false,
+  onOpenArtist,
   onOpenAlbum,
   onOpenPlaylist
 }) {
@@ -76,6 +77,19 @@ export default function SongScreen({
     return main.join(", ")
   }
 
+  const formatDate = (dateString)=>{
+
+    if(!dateString) return null
+
+    const d = new Date(dateString)
+
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2,"0")
+    const day = String(d.getDate()).padStart(2,"0")
+
+    return `${y}/${m}/${day}`
+  }
+
   return (
 
     <div className={`song-screen ${embedded ? "embedded" : ""}`}>
@@ -98,8 +112,15 @@ export default function SongScreen({
 
         <SongCard
           song={data || song}
+          onOpenArtist={onOpenArtist}
           showMenu={false}
         />
+
+        {data?.release_at && (
+          <div className="song-release-date">
+            {formatDate(data.release_at)}
+          </div>
+        )}
 
         {/* GENRES */}
 
@@ -213,11 +234,13 @@ export default function SongScreen({
               <div
                 key={p.id}
                 className="playlist-row"
-                onClick={() => onOpenPlaylist?.(p)}
+                onClick={() => {
+                  onOpenPlaylist?.(p)
+                }}
               >
 
                 <img
-                  src={p.image}
+                  src={p.cover_url}
                   alt={p.name}
                 />
 

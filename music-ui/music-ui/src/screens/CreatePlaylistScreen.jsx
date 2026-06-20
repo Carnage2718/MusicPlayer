@@ -14,7 +14,10 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
     ? [{
         song_id: initialSong.id || initialSong.song_id,
         title: initialSong.title,
-        image: initialSong.image,
+        image:
+          initialSong.image ||
+          initialSong.cover_url ||
+          initialSong.cover,
         artists: initialSong.artists,
         main: initialSong.main,
         ft: initialSong.ft,
@@ -24,7 +27,10 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
   )
   
   const fileRef = useRef()
-
+  const [playlistResults,setPlaylistResults] = useState([])
+  const [activeInput,setActiveInput] = useState("")
+  const [playlistId,setPlaylistId] = useState(null)
+  const [originalSongIds,setOriginalSongIds] = useState([])
   const [coverFile,setCoverFile] = useState(null)
   const [coverUrl,setCoverUrl] = useState(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -54,6 +60,21 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
     window.addEventListener("paste", handlePaste)
     return ()=> window.removeEventListener("paste", handlePaste)
   },[])
+
+  useEffect(()=>{
+
+    if(!name.trim()){
+      setPlaylistResults([])
+      return
+    }
+
+    authfetch(
+      `/search/playlist?q=${encodeURIComponent(name)}`
+    )
+    .then(r=>r.json())
+    .then(setPlaylistResults)
+
+  },[name])
 
   const cropToSquare = (file)=>{
     return new Promise((resolve)=>{
@@ -92,6 +113,42 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
     })
   }
 
+  const selectPlaylist = async (playlist)=>{
+
+    setPlaylistId(playlist.id)
+
+    setName(playlist.name)
+
+    const res = await authfetch(
+      `/playlists/${playlist.id}`
+    )
+
+    const data = await res.json()
+
+    setOriginalSongIds(
+      (data.songs || []).map(song => song.id)
+    )
+
+    setTracks(
+      (data.songs || []).map(song => ({
+        song_id: song.id,
+        title: song.title,
+        image: song.image,
+        artists: song.artists || [],
+        main: song.main,
+        ft: song.ft,
+        url: song.url
+      }))
+    )
+
+    setCoverUrl(
+      data.cover_url || null
+    )
+
+    setPlaylistResults([])
+    setActiveInput("")
+  }
+
 
   /* =========================
      REMOVE
@@ -113,20 +170,64 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
 
     setIsCreating(true)
 
-
     try{
+
+      const songIds = tracks
+        .map(t => t.song_id || t.id)
+        .filter(Boolean)
+
+      // =====================
+      // 既存Playlist更新
+      // =====================
+      if(playlistId){
+
+        const addedSongs =
+          tracks
+            .map(t => t.song_id || t.id)
+            .filter(id =>
+              !originalSongIds.includes(id)
+            )
+
+        if(addedSongs.length === 0){
+          onBack()
+          return
+        }
+
+        await authfetch(
+          `/playlists/${playlistId}/add/multi`,
+          {
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+              songs: addedSongs
+            })
+          }
+        )
+
+        onBack()
+        return
+      }
+
+      // =====================
+      // 新規作成
+      // =====================
+
       let uploaded = null
 
       if(coverFile instanceof File){
 
-        
         const fd = new FormData()
         fd.append("file",coverFile)
 
-        const res = await fetch(`${API_BASE}/upload/cover`,{
-          method:"POST",
-          body:fd
-        })
+        const res = await fetch(
+          `${API_BASE}/upload/cover`,
+          {
+            method:"POST",
+            body:fd
+          }
+        )
 
         const data = await res.json()
         uploaded = data.url
@@ -134,20 +235,55 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
 
       await authfetch(`/playlists`,{
         method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
           name,
-          cover_url: uploaded,
-          songs: tracks.map(t=>t.song_id)
+          cover_url:uploaded,
+          songs:songIds
         })
       })
 
       onBack()
+
     }catch(e){
       console.error(e)
     }finally{
       setIsCreating(false)
     }
+  }
+  const handleSelectSong = (song) => {
+
+    const songId = song.song_id || song.id
+
+    setTracks(prev => {
+
+      if(prev.some(t =>
+        (t.song_id || t.id) === songId
+      )){
+        return prev
+      }
+
+      return [
+        ...prev,
+        {
+          song_id: songId,
+          title: song.title,
+
+          image:
+            song.image ||
+            song.cover_url ||
+            song.cover,
+
+          artists: song.artists || [],
+          main: song.main,
+          ft: song.ft,
+          url: song.url
+        }
+      ]
+    })
+
   }
 
   /* =========================
@@ -165,20 +301,69 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
 
           <div className="create-playlist-left">
 
-            <input
-              placeholder="Playlist name"
-              value={name}
-              onChange={e=>setName(e.target.value)}
-            />
+            <div className="playlist-input-group">
 
-            <button
-              className="add-btn"
-              onClick={()=>
-                setShowSongPicker(true)
-              }
-            >
-              ADD SONG
-            </button>
+              <input
+                placeholder="Playlist name"
+                value={name}
+                onChange={(e)=>{
+                  setName(e.target.value)
+                  setActiveInput("playlist")
+                  setPlaylistId(null)
+                  setOriginalSongIds([])
+                }}
+              />
+
+              {activeInput === "playlist" &&
+              playlistResults.length > 0 && (
+
+                <div className="dropdown">
+
+                  {playlistResults.map(p=>(
+
+                    <div
+                      key={p.id}
+                      onClick={()=>
+                        selectPlaylist(p)
+                      }
+                    >
+                      {p.name}
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </div>
+
+            <div className="create-playlist-actions">
+
+              <button
+                className="add-btn" 
+                onClick={() => setShowSongPicker(true)}
+              >
+                ADD SONG
+              </button>
+
+              <button
+                className="create-playlist-submit-btn phone-btn"
+                onClick={createPlaylist}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <div className="loading-wrap">
+                    <div className="spinner"></div>
+                    creating...
+                  </div>
+                ) : (
+                  "CREATE"
+                )}
+              </button>
+
+            </div>
+
 
           </div>
 
@@ -216,12 +401,19 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
               )}
             </div>
 
-            <button 
-              className="submit-btn" 
+            <button
+              className="create-playlist-submit-btn desktop-btn"
               onClick={createPlaylist}
               disabled={isCreating}
             >
-              {isCreating ? "CREATING..." : "CREATE"}
+              {isCreating ? (
+                <div className="loading-wrap">
+                  <div className="spinner"></div>
+                  creating...
+                </div>
+              ) : (
+                "CREATE"
+              )}
             </button>
 
           </div>
@@ -237,10 +429,17 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
                 song={{
                   id: t.song_id,
                   title: t.title,
-                  image: t.image,
-                  artists: t.artists,
+
+                  image:
+                    t.image ||
+                    t.cover_url ||
+                    t.cover,
+
+                  artists: t.artists || [],
+
                   main: t.main,
                   ft: t.ft,
+
                   url: t.url
                 }}
                 showMenu={false}
@@ -262,45 +461,11 @@ export default function CreatePlaylistScreen({ onBack, initialSong }) {
       </div>
 
       <SearchPicker
-
         open={showSongPicker}
-
         type="song"
-
         title="Add Song"
-
-        onClose={()=>
-          setShowSongPicker(false)
-        }
-
-        onSelect={(song)=>{
-
-          setTracks(prev=>{
-
-            if(
-              prev.some(
-                t => t.song_id === song.id
-              )
-            ){
-              return prev
-            }
-
-            return [
-              ...prev,
-              {
-                song_id: song.id,
-                title: song.title,
-                image: song.image,
-                main: song.main,
-                ft: song.ft,
-                artists: song.artists,
-                url: song.url
-              }
-            ]
-          })
-
-        }}
-
+        onSelect={handleSelectSong}
+        onClose={()=>setShowSongPicker(false)}
       />
 
     </div>

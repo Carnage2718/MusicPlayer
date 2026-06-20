@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from "react"
+import { Music } from "lucide-react"
 import API_BASE from "../api"
 import AppHeader from "../components/AppHeader"
-import "./AlbumsScreen.css"
-import { Music } from "lucide-react"
-import textScroller from "../components/TextScroller"
+import ArtistLinks from "../components/ArtistLinks"
 import TextScroller from "../components/TextScroller"
+import "./AlbumsScreen.css"
+
 
 export default function AlbumsScreen({ 
   onOpenAlbum,
@@ -133,10 +134,8 @@ export default function AlbumsScreen({
                 <div
                   key={album.id}
                   className="albums-card"
-                  onClick={()=>onOpenAlbum(album)}
                 >
 
-                  {/* 🔥 ここ */}
                   <div
                     ref={el => {
                       if(showLetter) letterRefs.current[letter] = el
@@ -146,7 +145,9 @@ export default function AlbumsScreen({
                     {letter}
                   </div>
 
-                  <div className="albums-cover-wrap">
+                  <div 
+                    className="albums-cover-wrap"
+                    onClick={()=>onOpenAlbum(album)}>
                     {album.image ? (
                       <img src={album.image} className="albums-cover-img"/>
                     ) : (
@@ -162,7 +163,12 @@ export default function AlbumsScreen({
                   />
 
                   <div className="albums-artist">
-                    {formatArtists(album.artists)}
+
+                    <ArtistLinks
+                      artists={album.artists || []}
+                      onOpenArtist={onOpenArtist}
+                    />
+
                   </div>
 
                 </div>

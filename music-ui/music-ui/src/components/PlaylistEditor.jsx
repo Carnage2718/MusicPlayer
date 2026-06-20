@@ -90,7 +90,7 @@ export default function PlaylistEditor({
         if(isSelected && !wasIncluded){
 
           await authfetch(
-            `/playlists/${playlist.id}/add?song_id=${songId}`,
+            `/playlists/${playlist.id}/add/one?song_id=${songId}`,
             {
               method:"POST"
             }

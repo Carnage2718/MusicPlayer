@@ -51,3 +51,8 @@ class PlaylistCreate(BaseModel):
     description: str | None = None
     cover_url: str | None = None
     songs: list[int] = []
+
+
+class PlaylistAddSongs(BaseModel):
+    songs: list[int]
+

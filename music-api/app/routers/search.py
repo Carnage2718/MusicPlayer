@@ -328,6 +328,48 @@ def search_albums(q: str = Query("")):
         for r in rows
     ]
 
+# =========================
+# SEARCH PLAYLIST
+# =========================
+@router.get("/playlist")
+def search_playlist(
+    q: str = "",
+    user=Depends(get_current_user)
+):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    keyword = f"{q.strip()}%"
+
+    cur.execute("""
+        SELECT 
+            id, 
+            name, 
+            cover_url
+        FROM playlists
+        WHERE 
+            user_id=%s
+        AND
+            LOWER(REGEXP_REPLACE(name, '\s+', ' ', 'g'))
+            LIKE %s
+        ORDER BY name
+    """, (user, keyword))
+
+    playlists = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return [
+        {
+            "id": p[0],
+            "name": p[1],
+            "cover_url": build_cover_url(p[2])
+        }
+        for p in playlists
+    ]
+
 
 
 # =========================
@@ -445,13 +487,27 @@ def get_songs_with_artist(
         params = [keyword] + [f"{a}%" for a in artist_list]
 
         query = f"""
-        SELECT 
+        SELECT
             s.id,
             s.title,
-            STRING_AGG(ar.name, ', ') as artists
+            s.cover_url,
+
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'id', ar.id,
+                    'name', ar.name,
+                    'role', sa.role
+                )
+                ORDER BY
+                    CASE
+                        WHEN sa.role = 'main' THEN 0
+                        ELSE 1
+                    END,
+                    ar.name
+            ) AS artists
         FROM songs s
-        JOIN song_artists sa ON s.id = sa.song_id
-        JOIN artists ar ON sa.artist_id = ar.id
+        LEFT JOIN song_artists sa ON s.id = sa.song_id
+        LEFT JOIN artists ar ON sa.artist_id = ar.id
 
         WHERE LOWER(REGEXP_REPLACE(s.title, '\s+', ' ', 'g'))
             LIKE %s
@@ -464,30 +520,42 @@ def get_songs_with_artist(
             AND ({conditions})
         )
 
-        GROUP BY s.id, s.title
+        GROUP BY s.id, s.title, s.cover_url
         ORDER BY s.title ASC
-        LIMIT 5
         """
 
         cur.execute(query, params)   
          
     else:
         cur.execute("""
-        SELECT 
+        SELECT
             s.id,
             s.title,
-            STRING_AGG(ar.name, ', ') as artists
+            s.cover_url,
+
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'id', ar.id,
+                    'name', ar.name,
+                    'role', sa.role
+                )
+                ORDER BY
+                    CASE
+                        WHEN sa.role = 'main' THEN 0
+                        ELSE 1
+                    END,
+                    ar.name
+            ) AS artists
         FROM songs s
-        JOIN song_artists sa ON s.id = sa.song_id
-        JOIN artists ar ON sa.artist_id = ar.id
+        LEFT JOIN song_artists sa ON s.id = sa.song_id
+        LEFT JOIN artists ar ON sa.artist_id = ar.id
 
         WHERE LOWER(REGEXP_REPLACE(s.title, '\s+', ' ', 'g'))
             LIKE LOWER(%s)
 
-        GROUP BY s.id, s.title
+        GROUP BY s.id, s.title, s.cover_url
         ORDER BY s.title ASC
-        LIMIT 5
-        """, (f"{keyword}%",))
+        """, (keyword,))
 
     rows = cur.fetchall()
 
@@ -497,12 +565,11 @@ def get_songs_with_artist(
     result = []
 
     for r in rows:
-        artist_list = r[2].split(", ") if r[2] else []
-
         result.append({
             "id": r[0],
             "title": r[1],
-            "artists": artist_list  # 👈 配列で返す
+            "cover_url": build_cover_url(r[2]),
+            "artists": r[3] or []
         })
 
     return result

@@ -90,6 +90,9 @@
   color:#aaa;
   margin-top:-2px;
   cursor:pointer;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
 }
 
 .albums-artist-link {

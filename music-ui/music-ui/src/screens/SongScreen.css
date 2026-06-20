@@ -15,6 +15,18 @@
 
 }
 
+.song-release-date{
+
+  margin-top:8px;
+
+  text-align:right;
+
+  font-size:.9rem;
+
+  color:var(--text-secondary,#999);
+
+}
+
 .song-grab-wrapper{
 
   position:sticky;

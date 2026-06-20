@@ -40,8 +40,6 @@ export default function ArtistScreen({
 
         const data = await res.json()
 
-        console.log("artist data:", data)
-
         // APIエラー返却対策
         if (data.error) {
           throw new Error(data.error)

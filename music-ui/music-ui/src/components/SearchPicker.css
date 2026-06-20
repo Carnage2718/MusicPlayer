@@ -48,6 +48,29 @@
   font-size:20px;
 
   font-weight:700;
+
+  gap:12px;
+}
+
+.picker-artist-filter{
+
+  flex:1;
+
+  height:36px;
+
+  border:none;
+
+  border-radius:10px;
+
+  background:#242424;
+
+  color:white;
+
+  padding:0 12px;
+
+  position:relative;
+  top:10px;
+
 }
 
 .picker-header button{
@@ -102,4 +125,67 @@
 .picker-active{
 
   background:#1db95422;
+}
+
+.picker-entity-row{
+
+  display:flex;
+  align-items:center;
+
+  gap:12px;
+
+  padding:10px 14px;
+}
+
+.picker-entity-cover{
+
+  width:56px;
+  height:56px;
+
+  border-radius:8px;
+
+  object-fit:cover;
+
+  flex-shrink:0;
+}
+
+.picker-entity-cover.no-cover{
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+  background:#222;
+}
+
+.picker-section{
+  margin-bottom:24px;
+}
+
+.picker-section-title{
+  font-size:1rem;
+  font-weight:700;
+  color:#b3b3b3;
+  padding:10px 14px 6px;
+}
+
+.picker-entity-info{
+
+  min-width:0;
+}
+
+.picker-entity-title{
+
+  font-size:15px;
+  font-weight:600;
+
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.picker-entity-sub{
+
+  font-size:13px;
+  color:#999;
 }

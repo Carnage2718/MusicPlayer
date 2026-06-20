@@ -1,4 +1,9 @@
-export default function ArtistLinks({ artists = [], onOpenArtist }) {
+import TextScroller from "./TextScroller"
+
+export default function ArtistLinks({
+  artists = [],
+  onOpenArtist
+}) {
 
   const main = artists.filter(a => a.role === "main")
   const feat = artists.filter(a => a.role === "featuring")
@@ -9,8 +14,8 @@ export default function ArtistLinks({ artists = [], onOpenArtist }) {
   }
 
   return (
-    <>
-      {/* main */}
+    <TextScroller className="artist-links-scroll">
+
       {main.map((artist, i) => (
         <span key={artist.id}>
           <span
@@ -23,7 +28,6 @@ export default function ArtistLinks({ artists = [], onOpenArtist }) {
         </span>
       ))}
 
-      {/* ft */}
       {feat.length > 0 && " ft. "}
 
       {feat.map((artist, i) => (
@@ -37,6 +41,7 @@ export default function ArtistLinks({ artists = [], onOpenArtist }) {
           {i < feat.length - 1 && ", "}
         </span>
       ))}
-    </>
+
+    </TextScroller>
   )
 }

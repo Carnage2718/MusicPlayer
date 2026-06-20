@@ -2,6 +2,9 @@
    FORM
 ========================= */
 .create-playlist-form{
+  width:100%;
+  max-width: 1200px;
+  margin:0 auto;
   padding:16px;
   display:flex;
   flex-direction:column;
@@ -23,6 +26,9 @@
 ========================= */
 .create-playlist-hero{
   position: relative;
+  width:100%;
+  max-width: 600px;
+  margin:0 auto;
   display:grid;
   grid-template-columns: 1fr 180px;
   gap:20px;
@@ -37,6 +43,34 @@
   width:100%;
 
   position:relative;
+}
+
+.playlist-input-group{
+  position:relative;
+}
+
+.dropdown{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+
+  background:#111;
+
+  border-radius:12px;
+
+  overflow:hidden;
+
+  z-index:100;
+}
+
+.dropdown div{
+  padding:10px 12px;
+  cursor:pointer;
+}
+
+.dropdown div:hover{
+  background:#222;
 }
 
 
@@ -75,7 +109,7 @@
   cursor:pointer;
 }
 
-.submit-btn:disabled{
+.create-playlist-submit-btn:disabled{
   background:#555;
   cursor:not-allowed;
   opacity:0.7;
@@ -127,7 +161,7 @@
   gap:14px;
 }
 
-.submit-btn{
+.create-playlist-submit-btn{
   width:160px;
   height:48px;
   border:none;
@@ -136,52 +170,6 @@
   color:white;
   font-weight:bold;
   cursor:pointer;
-}
-
-/* =========================
-   SEARCH RESULT
-========================= */
-.search-result{
-  position: absolute;
-  top:100%;
-  left:0;
-  right:0;
-
-  margin-top: 12px;
-
-  max-height:400px;
-  overflow-y:auto;
-  background:#0f0f0f;
-  border-radius:10px;
-  border:1px solid #222;
-
-  z-index: 1000;
-}
-
-/* 選択中 */
-.selected{
-  background: rgba(29,185,84,0.2);
-}
-
-/* =========================
-   SCROLL
-========================= */
-.search-result::-webkit-scrollbar{
-  width:6px;
-}
-
-.search-result::-webkit-scrollbar-thumb{
-  background:#333;
-  border-radius:10px;
-}
-
-.search-item {
-  outline: none;
-}
-
-.search-item.selected {
-  background: rgba(29,185,84,0.15);
-  border-radius: 8px;
 }
 
 
@@ -198,8 +186,8 @@
 .track-item{
   display:flex;
   align-items:center;
-  justify-content:space-between;
   padding:6px 4px;
+  gap:8px;
   border-bottom:1px solid #222;
 }
 
@@ -243,4 +231,34 @@
   to{
     transform: rotate(360deg);
   }
+}
+
+@media (max-width:500px){
+
+  .create-playlist-hero{
+    display:flex;
+    flex-direction:column-reverse;
+    gap:16px;
+  }
+
+  .create-playlist-right{
+    width:100%;
+    align-items:center;
+  }
+
+  .create-playlist-left{
+    width:100%;
+    max-width:none;
+  }
+
+  .create-playlist-cover-wrap{
+    width:min(260px,70vw);
+    height:min(260px,70vw);
+  }
+
+  .submit-btn{
+    width:100%;
+    max-width:320px;
+  }
+
 }

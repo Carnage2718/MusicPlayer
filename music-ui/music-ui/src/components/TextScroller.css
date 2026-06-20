@@ -3,6 +3,7 @@
   max-width: 100%;
 
   overflow-x: auto;
+  overflow-y:hidden;
   white-space: nowrap;
   cursor: grab;
 }
@@ -14,4 +15,5 @@
 .text-inner {
   display: inline-block;
   padding-right: 20px;
+  min-width:max-content;
 }

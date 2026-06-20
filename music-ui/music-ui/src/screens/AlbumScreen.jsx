@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 import { Play, Shuffle } from "lucide-react"
 import API_BASE from "../api"
-import "./AlbumScreen.css"
+import ArtistLinks from "../components/ArtistLinks"
 import TextScroller from "../components/TextScroller"
 import AppHeader from "../components/AppHeader"
 import { useSongs } from "../context/SongsContext"
+import "./AlbumScreen.css"
 
 export default function AlbumScreen({
   album,
@@ -105,10 +106,12 @@ export default function AlbumScreen({
           </div>
 
           <div className="album-artist">
-            {formatArtists(album?.artists)}
-          </div>
-          <div className="album-info">
-            {songs.length} Songs
+
+            <ArtistLinks
+              artists={album?.artists || []}
+              onOpenArtist={onOpenArtist}
+            />
+
           </div>
 
         </div>

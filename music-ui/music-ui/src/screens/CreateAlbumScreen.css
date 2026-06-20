@@ -3,6 +3,8 @@
 ========================= */
 .create-form{
   padding:16px;
+  max-width:900px;
+  margin: 0 auto;
   display:flex;
   flex-direction:column;
   gap:16px;
@@ -104,18 +106,69 @@
 }
 
 .left-action{
+
   width:100%;
+
+  display:flex;
+  flex-direction:column;
+
+  gap:10px;
+
+}
+
+.song-select-row{
+
+  display:grid;
+
+  grid-template-columns:
+    70px
+    minmax(0,1fr);
+
+  gap:10px;
+
+}
+
+.album-track-input{
+  width:100%;
+  height:48px;
+
+  text-align:center;
+  font-weight:600;
+}
+
+.album-pick-song{
+
+  height:48px;
+
+  border:none;
+
+  border-radius:10px;
+
+  background:#111;
+
+  color:white;
+
+  padding:0 14px;
+
+  text-align:left;
+
+  display:flex;
+  align-items:center;
+
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+
+  cursor:pointer;
+}
+
+.album-action-row{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap:10px;
 }
 
-.track-input{
-  width:100%;
-  height:48px;
-}
-
-.add-btn{
+.album-add-btn{
   width:100%;
   height:48px;
   border:none;
@@ -134,13 +187,79 @@
 }
 
 .submit-btn{
-  width:160px;
+  width:100%;
   height:48px;
   border:none;
   border-radius:10px;
   background:#1db954;
   color:white;
   font-weight:bold;
+}
+
+.phone-btn{
+  display: none;
+}
+
+@media (max-width: 500px){
+
+  .create-album-hero{
+
+    display:flex;
+    flex-direction:column;
+
+    align-items:center;
+
+    gap:16px;
+  }
+
+  .right-side{
+
+    order:-1; /* coverを一番上へ */
+
+    width:100%;
+
+    align-items:center;
+  }
+
+  .create-album-artwork-wrap{
+
+    width:180px;
+    height:180px;
+  }
+
+  .create-album-form{
+
+    width:100%;
+    max-width:none;
+  }
+
+  /* ADD と CREATE を横並び */
+
+  .mobile-action-row{
+
+    display:grid;
+
+    grid-template-columns:1fr 1fr;
+
+    gap:10px;
+
+    width:100%;
+  }
+
+  .submit-btn,
+  .album-add-btn{
+
+    width:100%;
+  }
+
+  .desktop-btn{
+    display:none;
+  }
+
+  .phone-btn{
+    display:  block;
+  }
+
 }
 
 /* =========================

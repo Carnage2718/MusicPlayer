@@ -52,7 +52,7 @@ def initdb():
             stream_url TEXT,
             original_url TEXT,
             cover_url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
 
@@ -60,7 +60,7 @@ def initdb():
         CREATE TABLE IF NOT EXISTS artists (
             id SERIAL PRIMARY KEY,
             name TEXT UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
 
@@ -192,7 +192,7 @@ def songs_history():
         FROM songs s
         JOIN song_artists sa ON s.id = sa.song_id
         JOIN artists a ON sa.artist_id = a.id
-        ORDER BY s.created_at DESC
+        ORDER BY s.updated_at DESC
         LIMIT 10
         """)
 

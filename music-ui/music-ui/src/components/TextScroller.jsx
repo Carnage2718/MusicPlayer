@@ -1,7 +1,11 @@
 import { useRef, useEffect } from "react"
 import "./TextScroller.css"
 
-export default function TextScroller({ text, className }) {
+export default function TextScroller({
+  text,
+  className,
+  children
+}) {
 
   const ref = useRef(null)
 
@@ -23,7 +27,8 @@ export default function TextScroller({ text, className }) {
 
     const move = (x) => {
       if (!isDown) return
-      const walk = (startX - x)
+
+      const walk = startX - x
 
       if (Math.abs(walk) > 5) {
         moved = true
@@ -37,19 +42,19 @@ export default function TextScroller({ text, className }) {
 
       if (moved) {
         el.dataset.dragged = "true"
-        setTimeout(()=> el.dataset.dragged = "", 0)
+        setTimeout(() => {
+          el.dataset.dragged = ""
+        }, 0)
       }
 
       moved = false
     }
 
-    // mouse
     el.addEventListener("mousedown", e => start(e.pageX))
     el.addEventListener("mousemove", e => move(e.pageX))
     el.addEventListener("mouseup", end)
     el.addEventListener("mouseleave", end)
 
-    // touch
     el.addEventListener("touchstart", e => start(e.touches[0].pageX))
     el.addEventListener("touchmove", e => move(e.touches[0].pageX))
     el.addEventListener("touchend", end)
@@ -58,12 +63,14 @@ export default function TextScroller({ text, className }) {
   }, [])
 
   return (
-    <div className={`text-scroller ${className || ""}`} ref={ref}>
+    <div
+      className={`text-scroller ${className || ""}`}
+      ref={ref}
+    >
       <div className="text-inner">
-        {text}
+        {children || text}
       </div>
     </div>
   )
 }
-
 

@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from "react"
+import { Music } from "lucide-react"
+
 import API_BASE from "../api"
 import AppHeader from "../components/AppHeader"
+import SearchPicker from "../components/SearchPicker"
+
 import "./CreateAlbumScreen.css"
-import { Music } from "lucide-react"
 
 export default function CreateAlbumScreen({ onBack }){
 
   const [name,setName] = useState("")
   const [artists,setArtists] = useState([])
-  const [songQuery,setSongQuery] = useState("")
   const [activeInput,setActiveInput] = useState("")
   const [trackNumber,setTrackNumber] = useState("")
   const [trackError,setTrackError] = useState("")
@@ -16,10 +18,10 @@ export default function CreateAlbumScreen({ onBack }){
 
   const [albumResults,setAlbumResults] = useState([])
   const [artistResults,setArtistResults] = useState([])
-  const [songResults,setSongResults] = useState([])
 
   const [tracks,setTracks] = useState([])
   const [existingTracks,setExistingTracks] = useState([])
+  const [focusTrack,setFocusTrack] = useState(false)
 
   const [selectedAlbumImage,setSelectedAlbumImage] = useState(null)
   const [selectedSong,setSelectedSong] = useState(null)
@@ -29,12 +31,14 @@ export default function CreateAlbumScreen({ onBack }){
 
   const albumRef = useRef()
   const artistRef = useRef()
-  const songRef = useRef()
   const trackRef = useRef()
   const fileRef = useRef()
   const wrapperRef = useRef()
 
+  const [showSongPicker, setShowSongPicker] = useState(false)
   const [isCreating,setIsCreating] = useState(false)
+
+  const artistFilter = artists.map(a => a.name).join(", ")
 
   /* =========================
     key control
@@ -59,6 +63,26 @@ export default function CreateAlbumScreen({ onBack }){
     window.addEventListener("paste", handlePaste)
     return ()=>window.removeEventListener("paste", handlePaste)
   },[])
+
+  useEffect(()=>{
+
+    setHighlightIndex(0)
+
+  },[artistResults, albumResults])
+
+  useEffect(()=>{
+
+    if(!focusTrack) return
+
+    trackRef.current?.focus()
+
+    setFocusTrack(false)
+
+  },[
+    focusTrack,
+    artistInput,
+    existingTracks
+  ])
 
   const handleDrop = (e) => {
     e.preventDefault()
@@ -148,12 +172,14 @@ export default function CreateAlbumScreen({ onBack }){
   ========================= */
 
   const handleAddTrack = ()=>{
-    if(!selectedSong || !isValidTrackNumber()) return
+
+    if(!selectedSong || !isValidTrackNumber())
+      return
 
     const num = Number(trackNumber)
 
-    setTracks([
-      ...tracks,
+    setTracks(prev => [
+      ...prev,
       {
         song_id: selectedSong.id,
         title: selectedSong.title,
@@ -162,12 +188,13 @@ export default function CreateAlbumScreen({ onBack }){
     ])
 
     setSelectedSong(null)
-    setSongQuery("")
-    setTrackNumber("")
-    setSongResults([])
 
-    setTimeout(()=> {
-      songRef.current?.focus()
+    setTrackNumber("")
+
+    setShowSongPicker(false)
+
+    setTimeout(()=>{
+      trackRef.current?.focus()
     },0)
   }
 
@@ -195,11 +222,6 @@ export default function CreateAlbumScreen({ onBack }){
     } else setAlbumResults([])
   },[name])
 
-  const getLastQuery = (input) => {
-    const split = input.split(/,|ft\./i)
-    return split[split.length - 1].trim()
-  }
-
   useEffect(()=>{
 
     const query = getLastQuery(artistInput)
@@ -215,22 +237,6 @@ export default function CreateAlbumScreen({ onBack }){
   },[artistInput])
 
   useEffect(()=>{
-    if(songQuery){
-
-      let url = `${API_BASE}/search/song/artist?q=${songQuery}`
-
-      if (artists.length > 0){
-        const names = artists.map(a => a.name).join(",")
-        url += `&artist=${encodeURIComponent(names)}`
-      }
-
-      fetch(url)
-        .then(r=>r.json())
-        .then(setSongResults)
-    } else setSongResults([])
-  },[songQuery, artists])
-
-  useEffect(()=>{
     const handleClickOutside = (e)=>{
       if(!wrapperRef.current?.contains(e.target)){
         setActiveInput("")
@@ -243,6 +249,13 @@ export default function CreateAlbumScreen({ onBack }){
 
   },[])
 
+
+  const getLastQuery = (input) => {
+    const split = input.split(/,|ft\./i)
+    return split[split.length - 1].trim()
+  }
+
+
   /* =========================
      SELECT
   ========================= */
@@ -250,7 +263,14 @@ export default function CreateAlbumScreen({ onBack }){
   const selectAlbum = (a)=>{
     setName(a.name)
     setAlbumResults([])
-
+    setTracks([])
+    setSelectedSong(null)
+    setTrackNumber("")
+    setActiveInput("")
+    setArtistResults([])
+    setAlbumResults([])
+    setHighlightIndex(0)
+        
     fetch(`${API_BASE}/albums/${a.id}`)
       .then(r=>r.json())
       .then(data=>{
@@ -269,13 +289,10 @@ export default function CreateAlbumScreen({ onBack }){
             : main.join(", ")
 
         setArtistInput(formatted)
+
+        setFocusTrack(true)
       })
 
-    // 🔥 ここ追加（超重要）
-    setActiveInput("")
-    setArtistResults([])
-
-    setTimeout(()=> songRef.current?.focus(), 0)
   }
 
   const selectArtist = (a) => {
@@ -303,13 +320,13 @@ export default function CreateAlbumScreen({ onBack }){
       return prev.slice(0, prev.length - last.length) + spacePart + a.name
     })
     setArtistResults([])
-  }
 
-  const selectSong = (s)=>{
-    setSongQuery(s.title)
-    setSelectedSong(s)
-    setSongResults([])
+    setArtistResults([])
     setActiveInput("")
+
+    setTimeout(()=>{
+      trackRef.current?.focus()
+    },0)
   }
 
 
@@ -466,14 +483,21 @@ export default function CreateAlbumScreen({ onBack }){
                   setArtistInput(e.target.value)
                   setActiveInput("artist")
                 }}
-                onKeyDown={(e)=>handleKey(e, artistResults, selectArtist, songRef)}
+                onKeyDown={(e)=>
+                  handleKey(
+                    e, 
+                    artistResults, 
+                    selectArtist, 
+                    trackRef
+                  )
+                }
               />
 
               {activeInput==="artist" && artistResults.length > 0 && (
                 <div className="dropdown">
                   {artistResults.map((a,i)=>(
                     <div 
-                      key={a.id}
+                      key={`${a.id}-${i}`}
                       className={i === highlightIndex ? "create-album-active" : ""}
                       onClick={()=>selectArtist(a)}
                     >
@@ -483,70 +507,68 @@ export default function CreateAlbumScreen({ onBack }){
                 </div>
               )}
             </div>
-
-            {/* ===== SONG ===== */}
-
-            <div className="input-group">
-              <input
-                ref={songRef}
-                placeholder="Song"
-                value={songQuery}
-                onChange={e=>{
-                  setSongQuery(e.target.value)
-                  setActiveInput("song")
-                }}
-                onKeyDown={(e)=>handleKey(e, songResults, selectSong, trackRef)}
-              />
-
-              {activeInput==="song" && songResults.length > 0 && (
-                <div className="dropdown">
-                  {songResults.map((s,i)=>(
-                    <div 
-                      key={s.id} 
-                      className={i === highlightIndex ? "create-album-active" : ""}
-                      onClick={()=>selectSong(s)}
-                    >
-                      {s.title}
-                      {s.artists?.length > 1 && (
-                        <span className="feat">
-                          {" "}ft. {s.artists.slice(1).join(", ")}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
+            
             <div className="left-action">
-              <input
-                ref={trackRef}
-                className="track-input"
-                placeholder="#"
-                value={trackNumber}
-                onChange={e=>setTrackNumber(e.target.value)}
-                onKeyDown={(e)=>{
-                  if(e.key === "Enter"){
-                    e.preventDefault()
-                    handleAddTrack()
-                  }
-                }}
 
-              />
+              <div className="song-select-row">
 
-              <button 
-              className="add-btn" 
-              onClick={handleAddTrack} 
-              disabled={!canAdd}
-              style={{
-                background: canAdd ? "#1db954" : "#555",
-                cursor: canAdd ? "pointer" : "not-allowed"
-              }}
-            >
+                <input
+                  ref={trackRef}
+                  className="album-track-input"
+                  placeholder="#"
+                  value={trackNumber}
+                  onChange={e=>setTrackNumber(e.target.value)}
+                />
+
+                <button
+                  className="album-pick-song"
+                  onClick={() => setShowSongPicker(true)}
+                >
+                  {selectedSong
+                    ? selectedSong.title
+                    : "Select Song"}
+                </button>
+
+                
+              </div>
+
+              <button
+                className="album-add-btn desktop-btn"
+                onClick={handleAddTrack}
+                disabled={!canAdd}
+              >
                 ADD
               </button>
-            </div>
 
+              
+
+              <div className="album-action-row">
+                <button
+                  className="album-add-btn phone-btn"
+                  onClick={handleAddTrack}
+                  disabled={!canAdd}
+                >
+                  ADD
+                </button>
+
+                <button 
+                  className="submit-btn phone-btn" 
+                  onClick={createAlbum}
+                  disabled={isCreating}
+                >
+                  {isCreating ? (
+                    <div className="loading-wrap">
+                      <div className="spinner"></div>
+                      creating...
+                    </div>
+                  ) : (
+                    "CREATE"
+                  )}
+                </button>
+          
+
+              </div>
+            </div>
           </div>
 
           <div className="right-side">
@@ -584,22 +606,23 @@ export default function CreateAlbumScreen({ onBack }){
                   />
               </div>
               )}
-            </div>
-              
-            <button 
-              className="submit-btn" 
-              onClick={createAlbum}
-              disabled={isCreating}
-            >
-              {isCreating ? (
-                <div className="loading-wrap">
-                  <div className="spinner"></div>
-                  creating...
-                </div>
-              ) : (
-                "CREATE"
-              )}
-            </button>
+            </div>    
+            
+                <button 
+                  className="submit-btn desktop-btn" 
+                  onClick={createAlbum}
+                  disabled={isCreating}
+                >
+                  {isCreating ? (
+                    <div className="loading-wrap">
+                      <div className="spinner"></div>
+                      creating...
+                    </div>
+                  ) : (
+                    "CREATE"
+                  )}
+                </button>
+          
           </div>
 
         </div>
@@ -608,7 +631,10 @@ export default function CreateAlbumScreen({ onBack }){
           {/* ===== TRACK LIST ===== */}
           <div className="track-list">
             {tracks.map((t,i)=>(
-              <div key={i} className="track-item">
+              <div 
+                key={`${t.song_id}-${t.track_number}`} 
+                className="track-item"
+              >
                 <span>#{t.track_number ?? "-"} - {t.title}</span>
                 <div
                   onClick={()=>removeTrack(i)}
@@ -623,8 +649,8 @@ export default function CreateAlbumScreen({ onBack }){
           {existingTracks.length > 0 && (
             <div className="existing">
               <h4>Existing Tracks</h4>
-              {existingTracks.map(t=>(
-                <div key={t.song_id}>
+              {existingTracks.map((t,i)=>(
+                <div key={`${t.song_id}-${t.track_number}-${i}`}>
                   #{t.track_number ?? "-"} - {t.title}
                 </div>
               ))}
@@ -632,6 +658,34 @@ export default function CreateAlbumScreen({ onBack }){
           )}
         </div>
       </div>
+
+      
+      <SearchPicker
+
+        open={showSongPicker}
+
+        type="song"
+
+        title="Add Song"
+
+        defaultArtist={artistFilter}
+
+        autoClose={true}
+
+        onClose={()=>
+          setShowSongPicker(false)
+        }
+
+        onSelect={(song)=>{
+
+          setSelectedSong(song)
+
+        }}
+
+        onOpenArtist={selectArtist}
+      />
+      
     </div>
+
   )
 }

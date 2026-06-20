@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react"
+import API_BASE, {authfetch} from "../api"
 import AppHeader from "../components/AppHeader"
-import "./UploadScreen.css"
-import API_BASE from "../api"
 import SongCard from "../components/SongCard"
+import SearchPicker from "../components/SearchPicker"
+import "./UploadScreen.css"
 
 export default function UploadScreen({
   onSelectSong,
@@ -87,7 +88,7 @@ function CoverFlow({
   const [loading,setLoading] = useState(false)
   const [animate,setAnimate] = useState(false)
   const [isDragging, setISDragging] = useState(false)
-
+  const [pickerOpen, setPickerOpen] = useState(false)
   useEffect(()=>{
     const handlePaste = (e)=>{
       const items = e.clipboardData?.items
@@ -198,6 +199,38 @@ function CoverFlow({
     setSelected(null)
   }
 
+  const assign = async()=>{
+
+    if(!selected) return
+
+    try{
+
+      await fetch(
+        `${API_BASE}/upload/cover/assign/${selected.type}`,
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json"
+          },
+
+          body:JSON.stringify({
+            [`${selected.type}_id`]:
+              selected.id,
+
+            cover_url: coverUrl
+          })
+        }
+      )
+
+      resetAll()
+
+    }catch(e){
+
+      console.error(e)
+
+    }
+  }
+
   return(
     <>
       <div 
@@ -244,184 +277,69 @@ function CoverFlow({
         </button>
       )}
 
-      {coverUrl &&(
-        <SearchUI 
-          coverUrl={coverUrl} 
-          previewUrl={preview} 
-          onDone={resetAll} 
-          setSelected={setSelected}
-          selected={selected}
-        />
+      {coverUrl && (
+
+        <div className="cover-assign-area">
+
+          <button
+            className="selected-target-btn"
+            onClick={()=>setPickerOpen(true)}
+          >
+            {selected
+              ? `${selected.type}: ${selected.label}`
+              : "Select Target"}
+          </button>
+
+          {selected && (
+
+            <div className="cover-assign-footer">
+
+              <button
+                className="apply-btn"
+                onClick={assign}
+              >
+                Apply
+              </button>
+
+            </div>
+
+          )}
+
+          <SearchPicker
+            open={pickerOpen}
+            type="global"
+
+            title="Select Cover Target"
+
+            autoClose={true}
+
+            onClose={()=>
+              setPickerOpen(false)
+            }
+
+            onSelect={(item)=>{
+
+              const old =
+                item.cover_url ??
+                item.image ??
+                item.image_url ??
+                null
+
+              setSelected({
+                id:item.id,
+                type:item.type,
+                label:item.title || item.name,
+                oldCover:old
+              })
+            }}
+          />
+
+        </div>
 
       )}
     </>
   )
 }
-
-/* =========================
-   SEARCH + ASSIGN
-========================= */
-
-function SearchUI({coverUrl, previewUrl, onDone, setSelected,selected}){
-
-  const [query,setQuery] = useState("")
-  const [data,setData] = useState(null)
-  const [isApplying,setIsApplying] = useState(false)
-
-  useEffect(()=>{
-
-    if(!query){
-      setData(null)
-      return
-    }
-
-    const controller = new AbortController()
-
-    const t = setTimeout(async()=>{
-      try{
-        const res = await fetch(`${API_BASE}/search?q=${query}`,{
-          signal: controller.signal
-        })
-        const d = await res.json()
-        setData(d)
-      }catch(e){
-        if(e.name !== "AbortError"){
-          console.error(e)
-        }
-      }
-    },150)
-
-    return ()=>{
-      clearTimeout(t)
-      controller.abort()
-    }
-
-  },[query])
-
-  const reset = ()=>{
-    setQuery("")
-    setSelected(null)
-    setData(null)
-
-  }
-
-  const selectItem = (item,type,label)=>{
-
-    const old = item.cover_url ?? item.image_url ?? null
-
-    setSelected({
-      id: item.id,
-      type,
-      label,
-      oldCover: old
-    })
-
-    setQuery(label)
-  }
-
-  const assign = async()=>{
-
-    if(!selected || !selected.id || isApplying) return
-
-    setIsApplying(true)
-
-    try{
-      await fetch(`${API_BASE}/upload/cover/assign/${selected.type}`,{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({
-          [`${selected.type}_id`]: selected.id,
-          cover_url: coverUrl
-        })
-      })
-
-      onDone()
-
-    }finally{
-      setIsApplying(false)
-    }
-  }
-
-
-  return(
-    <div className="search-container">
-      <div className="search-block">
-
-        {/* 🔥 入力エリア */}
-        <div className="search-input-wrap">
-
-          <input
-            className="search-input"
-            placeholder="Search..."
-            value={query}
-            onChange={(e)=>setQuery(e.target.value)}
-          />
-
-          {query && (
-            <div className="clear-btn" onClick={reset}>
-              ×
-            </div>
-          )}
-        </div>
-
-        {/* 🔥 右下エリア */}
-        <div className="search-actions">
-
-          {selected?.id && (
-            <div className="selected-type">
-              {selected.type}
-            </div>
-          )}
-
-          <button
-            className="confirm-btn"
-            onClick={assign}
-            disabled={!selected?.id || isApplying}
-          >
-            {isApplying ? "Applying..." : "Apply"}
-          </button>
-
-        </div>
-
-      </div>
-
-      {data && ["songs","playlists","artists"].map(section=>(
-        data[section]?.length>0 && (
-          <Section key={section} title={section}>
-            {data[section].map(i=>(
-              <Item
-                key={i.id}
-                title={i.title || i.name}
-                subtitle={i.artists}
-                onClick={()=>selectItem(i,section.slice(0,-1),i.title||i.name)}
-                isActive={selected?.id===i.id}
-              />
-            ))}
-          </Section>
-        )
-      ))}
-    </div>
-  )
-}
-
-function Section({title,children}){
-  return(
-    <div className="section">
-      <div className="section-title">{title}</div>
-      {children}
-    </div>
-  )
-}
-
-function Item({title,subtitle,onClick,isActive}){
-  return(
-    <div className={`item ${isActive ? "active-item" : ""}`} onClick={onClick}>
-      <div className="item-title">{title}</div>
-      {subtitle && <div className="item-sub">{subtitle}</div>}
-    </div>
-  )
-}
-
 
 
 /* =========================

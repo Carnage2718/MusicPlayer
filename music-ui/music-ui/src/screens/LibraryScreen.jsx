@@ -9,7 +9,8 @@ export default function LibraryScreen({
   openSongs,
   openArtists,
   openAlbums,
-  openGenre
+  openGenre,
+  onOpenArtist
 }) {
 
   const [recent, setRecent] = useState([])
@@ -111,6 +112,7 @@ export default function LibraryScreen({
                 url: song.url
               }}
               onSelectSong={onSelectSong}
+              onOpenArtist={onOpenArtist}
             />
 
           ))}
@@ -146,6 +148,7 @@ export default function LibraryScreen({
                 url: song.url
               }}
               onSelectSong={onSelectSong}
+              onOpenArtist={onOpenArtist}
             />
 
           ))}
