@@ -200,7 +200,7 @@ def get_latest_queue_context(cur, user_id):
             shuffle_mode
         FROM queue_context
         WHERE user_id=%s
-        ORDER BY update_at DESC
+        ORDER BY updated_at DESC
         LIMIT 1
     """,(user_id,))
 

@@ -52,7 +52,7 @@ def initdb():
             stream_url TEXT,
             original_url TEXT,
             cover_url TEXT,
-            update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
 
