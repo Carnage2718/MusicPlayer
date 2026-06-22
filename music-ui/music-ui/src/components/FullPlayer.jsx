@@ -1,20 +1,11 @@
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Shuffle,
-  Repeat,
-  ListMusic,
-  Music
-} from "lucide-react"
-
 import { useRef, useState, useEffect } from "react"
-import "./FullPlayer.css"
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, ListMusic, Music, Disc3 } from "lucide-react"
+import { useSongs } from "../context/SongsContext"
 import ArtistLinks from "./ArtistLinks"
 import TextScroller from "./TextScroller"
-import { useSongs } from "../context/SongsContext"
 import QueueScreen from "../screens/QueueScreen"
+import SongScreen from "../screens/SongScreen"
+import "./FullPlayer.css"
 
 export default function FullPlayer({
   song,
@@ -24,7 +15,9 @@ export default function FullPlayer({
   progress,
   shuffleMode,
   setShuffleMode,
-  onOpenArtist
+  onOpenArtist,
+  onOpenAlbum,
+  onOpenPlaylist
 }) {
 
   const startY = useRef(0)
@@ -138,17 +131,31 @@ export default function FullPlayer({
 
         <div
           className={`fullplayer-slider ${
-            tab === "queue" ? "show-queue" : ""
+            tab==="song"
+              ? "show-song"
+              : tab === "queue" 
+              ? "show-queue" 
+              : "show-player"
           }`}
         >
+          {/*songscreen*/}
+          <div className="song-tab">
+            <SongScreen
+              song={song}
+              tabMode={true}
+              onBackToPlayer={()=>setTab("player")}
+              onCloseTab={onClose}
+              onOpenArtist={onOpenArtist}
+              onOpenAlbum={onOpenAlbum}
+              onOpenPlaylist={onOpenPlaylist}
+            />
+          </div>
 
-          {/* PLAYER TAB */}
+          {/*fullplayer*/}
           <div className="player-tab">
 
             <div className="player-inner">
 
-
-              {/* TOP BAR */}
 
               <div
                 className="player-top"
@@ -274,6 +281,11 @@ export default function FullPlayer({
 
               <div className="extra-controls">
 
+                <Disc3
+                  size={20}
+                  onClick={()=>setTab("song")}
+                />
+
                 <Shuffle
                   size={20}
                   color={shuffleMode ? "#1db954":"white"}
@@ -305,8 +317,8 @@ export default function FullPlayer({
 
             </div>
           </div>
-              
-          {/* QUEUE TAB */}
+  
+          {/*queuescreen*/}
           <div className="queue-tab">
 
             <QueueScreen
@@ -317,6 +329,7 @@ export default function FullPlayer({
               setIsPlaying={setIsPlaying}
               onOpenArtist={onOpenArtist}
             />
+
 
           </div>
 

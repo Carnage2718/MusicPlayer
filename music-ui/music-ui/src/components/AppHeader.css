@@ -66,3 +66,25 @@
 
 }
 
+.header-left{
+
+  display:flex;
+  align-items:center;
+
+  gap:10px;
+
+  flex:1;
+
+}
+
+.header-right{
+
+  width:40px;
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+  flex-shrink:0;
+
+}

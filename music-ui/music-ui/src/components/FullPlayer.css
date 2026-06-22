@@ -88,7 +88,7 @@ SLIDER
 ========================= */
 
 .fullplayer-tabs{
-  width:100%;
+  width:100vw;
   height:100%;
   overflow:hidden;
 }
@@ -96,21 +96,28 @@ SLIDER
 .fullplayer-slider{
   display:flex;
 
-  width:100%;
   height:100%;
 
   transition:transform .35s ease;
 }
 
-.fullplayer-slider.show-queue{
-  transform:translateX(-100%);
+.fullplayer-slider.show-song{
+  transform:translateX(0%);
 }
 
+.fullplayer-slider.show-player{
+  transform:translateX(-100vw);
+}
+
+.fullplayer-slider.show-queue{
+  transform:translateX(-200vw);
+}
+
+.song-tab,
 .player-tab,
 .queue-tab{
-  flex:0 0 100%;
-
-  width:100%;
+  flex: 0 0 100vw;
+  width:100vw;
   height:100%;
 }
 
@@ -236,6 +243,15 @@ RECORD
   animation-play-state:paused;
 
   overflow:hidden;
+}
+
+@keyframes spin{
+  from{
+    transform:rotate(0deg);
+  }
+  to{
+    transform:rotate(360deg);
+  }
 }
 
 .record-vinyl::after{
@@ -468,13 +484,4 @@ CONTROLS
 
   font-size:10px;
   color:#1db954;
-}
-
-@keyframes spin{
-  from{
-    transform:rotate(0deg);
-  }
-  to{
-    transform:rotate(360deg);
-  }
 }

@@ -15,12 +15,31 @@ export function SongsProvider({ children }) {
     `homeCache_${userId}`
 
   const [homeData, setHomeData] = useState(() => {
+
     try {
+
       const saved =
         localStorage.getItem(HOME_CACHE_KEY)
-      return saved
-        ? JSON.parse(saved)
-        : null
+
+      if (!saved) return null
+
+      const parsed = JSON.parse(saved)
+
+      const SIX_HOURS =
+        6 * 60 * 60 * 1000
+
+      if (
+        Date.now() - parsed.timestamp >
+        SIX_HOURS
+      ) {
+
+        localStorage.removeItem(HOME_CACHE_KEY)
+
+        return null
+      }
+
+      return parsed.data
+
     } catch {
 
       return null
@@ -71,7 +90,10 @@ export function SongsProvider({ children }) {
 
       localStorage.setItem(
         HOME_CACHE_KEY,
-        JSON.stringify(homeData)
+        JSON.stringify({
+          timestamp: Date.now(),
+          data: homeData
+        })
       )
 
     }

@@ -9,19 +9,27 @@ import "./SongScreen.css"
 
 export default function SongScreen({
   song,
-  embedded = false,
+  tabMode = false,
+  onSelectSong,
   onOpenArtist,
   onOpenAlbum,
-  onOpenPlaylist
+  onOpenPlaylist,
+  onCloseTab,
+  onBackToPlayer
 }) {
 
   const [showGenreEditor,setShowGenreEditor] = useState(false)
   const [showPlaylistEditor,setShowPlaylistEditor] = useState(false)
   const [data,setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const songId = song?.id || song?.song_id
 
 
   const load = async()=>{
+
+    if(song?.song_id){
+      song.id = song?.song_id
+    }
 
     if(!song?.id){
       return
@@ -32,7 +40,7 @@ export default function SongScreen({
       setLoading(true)
 
       const res =
-        await authfetch(`/songs/${song.id}/screen`)
+        await authfetch(`/songs/${song?.id}/screen`)
 
       const json =
         await res.json()
@@ -90,14 +98,39 @@ export default function SongScreen({
     return `${y}/${m}/${day}`
   }
 
+  const handleSongCardClick = ()=>{
+
+    if(tabMode){
+
+      onBackToPlayer?.()
+      return
+
+    }
+
+    onSelectSong?.(data || song)
+
+  }
+
+  const handleOpenArtist = (artist)=>{
+
+    if(tabMode){
+      onCloseTab?.()
+    }
+
+    onOpenArtist?.(artist)
+  }
+
   return (
 
-    <div className={`song-screen ${embedded ? "embedded" : ""}`}>
+    <div className={`song-screen ${tabMode ? "tab-mode" : ""}`}>
 
-      {embedded ? (
+      {tabMode ? (
 
         <div className="song-grab-wrapper">
-          <div className="grab-bar"/>
+          <div 
+            className="grab-bar"
+            onClick={onCloseTab}
+          />
         </div>
 
       ) : (
@@ -112,12 +145,14 @@ export default function SongScreen({
 
         <SongCard
           song={data || song}
-          onOpenArtist={onOpenArtist}
+          onSelectSong={handleSongCardClick}
+          onOpenArtist={handleOpenArtist}
           showMenu={false}
         />
 
         {data?.release_at && (
           <div className="song-release-date">
+            release :
             {formatDate(data.release_at)}
           </div>
         )}
@@ -180,7 +215,15 @@ export default function SongScreen({
 
             <div
               className="songscreen-album-card"
-              onClick={() => onOpenAlbum?.(data.album)}
+              onClick={() => {
+
+                if(tabMode){
+                  onCloseTab?.()
+                }
+
+                onOpenAlbum?.(data.album)
+
+              }}
             >
               <img
                 src={data.album.image}
@@ -235,7 +278,13 @@ export default function SongScreen({
                 key={p.id}
                 className="playlist-row"
                 onClick={() => {
+
+                  if(tabMode){
+                    onCloseTab?.()
+                  }
+
                   onOpenPlaylist?.(p)
+
                 }}
               >
 
@@ -265,7 +314,7 @@ export default function SongScreen({
 
         {showGenreEditor && (
           <GenreEditor
-            songId={song.id}
+            songId={songId}
             selectedGenres={genres}
             onClose={()=>
               setShowGenreEditor(false)

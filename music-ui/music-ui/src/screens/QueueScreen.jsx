@@ -1,19 +1,9 @@
 import { useLayoutEffect, useRef, useState, useEffect } from "react"
+import { Shuffle, Play, Pause, SkipForward, SkipBack, Music, GripVertical} from "lucide-react"
 import API_BASE, { authfetch } from "../api"
-
-import {
-  Shuffle,
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
-  Music,
-  GripVertical
-} from "lucide-react"
-
-import "./QueueScreen.css"
 import SongCard from "../components/SongCard"
 import { useSongs } from "../context/SongsContext"
+import "./QueueScreen.css"
 
 export default function QueueScreen({
   setTab,
@@ -210,7 +200,10 @@ export default function QueueScreen({
                       url: song.url
                     }}
                     onSelectSong={() => playSong(song)}
-                    onOpenArtist={onOpenArtist}
+                    onOpenArtist={(artist)=>{
+                      onOpenArtist?.(artist)
+                      onClose?.()
+                    }}
                     showMenu={false}
                   />
                 </div>
@@ -242,7 +235,10 @@ export default function QueueScreen({
                   image: currentSong?.cover || currentSong?.image,
                   url: currentSong?.url
                 }}
-                onOpenArtist={onOpenArtist}
+                onOpenArtist={(artist)=>{
+                  onOpenArtist?.(artist)
+                    onClose?.()
+                }}
                 showMenu={false}
               />
 
@@ -320,7 +316,10 @@ export default function QueueScreen({
                       url: song.url
                     }}
                     onSelectSong={() => playSong(song)}
-                    onOpenArtist={onOpenArtist}
+                    onOpenArtist={(artist)=>{
+                      onOpenArtist?.(artist)
+                      onClose?.()
+                    }}
                     showMenu={false}
                   />
                 </div>

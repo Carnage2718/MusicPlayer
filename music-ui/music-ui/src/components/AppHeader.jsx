@@ -1,23 +1,30 @@
 import "./AppHeader.css"
 
-export default function AppHeader({ title }) {
+export default function AppHeader({ title, rightAction }) {
 
   return (
 
     <div className="app-header">
 
-      <img
-        src="/icon_nobackground.png"
-        className="app-header-icon"
-        alt="MusicPlayer"
-      />
+      <div className="header-left">
 
-      <div className="main-title">
-        {title}
+        <img
+          src="/icon_nobackground.png"
+          className="app-header-icon"
+          alt="MusicPlayer"
+        />
+
+        <div className="main-title">
+          {title}
+        </div>
+
+      </div>
+
+      <div className="header-right">
+        {rightAction}
       </div>
 
     </div>
-
   )
 
 }

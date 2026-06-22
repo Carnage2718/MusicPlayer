@@ -43,6 +43,10 @@ function AppContent() {
   const [selectedAlbum, setSelectedAlbum] = useState(null)
   const [selectedPlaylist, setSelectedPlaylist] = useState(null)
   const [isFullPlayer, setIsFullPlayer] = useState(false)
+  
+  const closeFullPlayer = ()=>{
+    setIsFullPlayer(false)
+  }
 
   const openSong = (s) => {
     setSelectedSong(s)
@@ -115,10 +119,12 @@ function AppContent() {
         return(
           <SongScreen
             song={selectedSong}
+            tabMode={false}
             onSelectSong={playSong}
             onOpenArtist={openArtist}
             onOpenAlbum={openAlbum}
             onOpenPlaylist={openPlaylist}
+            onCloseTab={closeFullPlayer}
           />
         )
       
@@ -289,6 +295,8 @@ function AppContent() {
             progress={progress}
             onClose={()=>setIsFullPlayer(false)}
             onOpenArtist={openArtist}
+            onOpenAlbum={openAlbum}
+            onOpenPlaylist={openPlaylist}
           />
 
         )}

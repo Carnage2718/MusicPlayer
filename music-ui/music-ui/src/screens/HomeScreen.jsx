@@ -1,10 +1,11 @@
 import { useEffect, useCallback } from "react"
-import { useSongs } from "../context/SongsContext"
-import { Play, Music } from "lucide-react"
+import { Play, Music, LogOut } from "lucide-react"
 import API_BASE, { authfetch }from "../api"
-import "./HomeScreen.css"
+import { useSongs } from "../context/SongsContext"
 import AppHeader from "../components/AppHeader"
 import TextScroller from "../components/TextScroller"
+import "./HomeScreen.css"
+
 
 export default function HomeScreen({
   onSelectSong,
@@ -150,7 +151,19 @@ export default function HomeScreen({
 
     <div className="screen">
 
-      <AppHeader title="Home" />
+      <AppHeader 
+        title="Home"
+        rightAction={
+          <LogOut
+            size={20}
+            onClick={()=>{
+              localStorage.clear()
+              sessionStorage.clear()
+              window.location.reload()
+            }}
+          />
+        } 
+      />
 
       <div className="bottom-countermeasure">
 
