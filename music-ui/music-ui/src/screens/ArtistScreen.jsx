@@ -10,7 +10,8 @@ import { useSongs } from "../context/SongsContext"
 export default function ArtistScreen({ 
   artistId, 
   onSelectSong, 
-  onOpenArtist 
+  onOpenArtist,
+  onOpenAlbum
 }) {
 
   const [artist, setArtist] = useState(null)
@@ -243,6 +244,7 @@ export default function ArtistScreen({
               <div 
                 key={album.id}
                 className="artist-album-card"
+                onClick={()=>onOpenAlbum?.({id:album.id, name:album.title, image:album.cover_url})}
               >
 
                 {album.cover_url ? (
@@ -316,7 +318,8 @@ export default function ArtistScreen({
               <div 
                 key={a.id}
                 className="related-card"
-                onClick={()=>onOpenArtist?.({id:a.id})}>
+                onClick={()=>onOpenArtist?.({id:a.id})}
+              >
 
                 {a.cover_url ? (
                   <img src={a.cover_url} className="related-image"/>

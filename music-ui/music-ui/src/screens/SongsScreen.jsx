@@ -240,15 +240,15 @@ export default function SongsScreen({
               )
             })}
 
-            {!loading && songs.length > 0 && (
-              <div className="songs-total">
-                {songs.length} songs
-              </div>
-            )}
-
           </div>
 
         ))}
+
+        {!loading && songs.length > 0 && (
+          <div className="songs-total">
+            {songs.length} songs
+          </div>
+        )}
 
         {!loading && songs.length === 0 &&(
           <div className="songs-end">

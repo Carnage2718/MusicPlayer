@@ -95,7 +95,7 @@ export default function AlbumScreen({
       <div className="album-header">
 
         <img
-          src={album?.image || "/Mayhem.png"}
+          src={album?.image}
           className="album-cover"
         />
 
