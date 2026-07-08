@@ -6,6 +6,7 @@
   flex-direction:column;
   gap:6px;
   cursor:pointer;
+  width:100%;
 }
 
 .playlists-card:hover{
@@ -15,7 +16,7 @@
 /* =========================
    COVER
 ========================= */
-.playlists-cover-wrap{
+.playlists-card-cover-wrap{
   width:100%;
   aspect-ratio:1/1;
   border-radius:14px;
@@ -23,7 +24,7 @@
   background:#111;
 }
 
-.playlists-cover-img{
+.playlists-card-cover-img{
   width:100%;
   height:100%;
   object-fit:cover;
@@ -31,11 +32,11 @@
   transition: transform 0.25s ease;
 }
 
-.playlists-card:hover .playlists-cover-img{
+.playlists-card:hover .playlists-card-cover-img{
   transform: scale(1.05);
 }
 
-.playlists-cover-placeholder{
+.playlists-card-cover-placeholder{
   width:100%;
   height:100%;
   display:flex;
@@ -48,14 +49,17 @@
 /* =========================
    TEXT
 ========================= */
-.playlists-title{
+.playlists-card-title{
   font-size:15px;
   font-weight:bold;
   color:#1db954;
   line-height:1.2;
+  height:36px;
+  overflow:hidden;
 }
 
-.playlists-meta{
+.playlists-card-meta{
   font-size:13px;
   color:#aaa;
+  height:16px;
 }

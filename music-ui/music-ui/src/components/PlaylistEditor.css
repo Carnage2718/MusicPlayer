@@ -16,6 +16,10 @@
 
 }
 
+.playlist-item{
+  width:100%;
+}
+
 .playlist-editor-modal{
 
   width:min(92%,500px);
@@ -48,12 +52,13 @@
   flex:1;
 
   overflow-y:auto;
+  overflow-x:hidden;
 
   padding:20px 24px 24px;
 
   display:grid;
 
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(3,minmax(0,1fr));
 
   gap:12px;
 
@@ -62,6 +67,11 @@
   scrollbar-width:none;
 
   -ms-overflow-style:none;
+
+  align-items:start;
+
+  width:100%;
+  box-sizing:border-box;
 
 }
 

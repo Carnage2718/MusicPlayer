@@ -10,14 +10,14 @@ export default function PlaylistCard({
   return (
     <div className="playlists-card">
 
-      <div className="playlists-cover-wrap">
+      <div className="playlists-card-cover-wrap">
         {playlist.cover_url ? (
           <img
             src={playlist.cover_url}
-            className="playlists-cover-img"
+            className="playlists-card-cover-img"
           />
         ) : (
-          <div className="playlists-cover-placeholder">
+          <div className="playlists-card-cover-placeholder">
             <Music size={48}/>
           </div>
         )}
@@ -25,10 +25,10 @@ export default function PlaylistCard({
 
       <TextScroller
         text={playlist.name}
-        className="playlists-title"
+        className="playlists-card-title"
       />
 
-      <div className="playlists-meta">
+      <div className="playlists-card-meta">
         {playlist.song_count || 0} songs
       </div>
 
