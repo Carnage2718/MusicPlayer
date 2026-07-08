@@ -91,28 +91,6 @@
 
 }
 
-.playlist-editor-confirm{
-
-  flex-shrink:0;
-
-  margin:6px 24px 6px;
-
-  width:calc(100% - 48px);
-
-  height:52px;
-
-  border:none;
-
-  border-radius:999px;
-
-  background:#1db954;
-
-  color:black;
-
-  font-weight:700;
-
-}
-
 .playlist-loading{
 
   grid-column:1 / -1;

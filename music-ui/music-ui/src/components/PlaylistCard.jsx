@@ -8,10 +8,7 @@ export default function PlaylistCard({
 }) {
 
   return (
-    <div
-      className="playlists-card"
-      onClick={()=>onOpenPlaylist?.(playlist)}
-    >
+    <div className="playlists-card">
 
       <div className="playlists-cover-wrap">
         {playlist.cover_url ? (

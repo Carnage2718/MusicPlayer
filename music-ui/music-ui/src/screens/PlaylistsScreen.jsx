@@ -75,11 +75,13 @@ export default function PlaylistsScreen({
             <div className="songs-letter">{letter}</div>
 
             {grouped[letter].map(pl=>(
-              <PlaylistCard
-                key={pl.id}
-                playlist={pl}
-                onOpenPlaylist={onOpenPlaylist}
-              />
+              <div onClick={()=>onOpenPlaylist?.(pl)} key={pl.id}>
+                <PlaylistCard
+                  key={pl.id}
+                  playlist={pl}
+                  onOpenPlaylist={onOpenPlaylist}
+                />
+              </div>
             ))}
 
           </div>

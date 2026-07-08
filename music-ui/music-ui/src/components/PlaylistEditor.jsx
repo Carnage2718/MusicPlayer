@@ -5,13 +5,19 @@ import "./PlaylistEditor.css"
 
 export default function PlaylistEditor({
   songId,
+  includedPlaylists = [],
   onClose,
   onSaved
 }){
 
   const [playlists,setPlaylists] = useState([])
-  const [selected,setSelected] = useState([])
   const [loading,setLoading] = useState(true)
+  const [saving,setSaving] = useState(false)
+  const includedIds = includedPlaylists.map(p => p.id)
+  const availablePlaylists =
+    playlists.filter(
+      p => !includedIds.includes(p.id)
+    )
 
   useEffect(()=>{
 
@@ -33,18 +39,6 @@ export default function PlaylistEditor({
 
       setPlaylists(data)
 
-      const included =
-        await authfetch(
-          `/songs/${songId}/playlists`
-        )
-
-      const includedData =
-        await included.json()
-
-      setSelected(
-        includedData.map(p=>p.id)
-      )
-
     }catch(err){
 
       console.error(err)
@@ -57,70 +51,33 @@ export default function PlaylistEditor({
 
   }
 
-  const togglePlaylist = (id)=>{
+  const togglePlaylist = async (playlist)=>{
 
-    setSelected(prev=>{
-
-      if(prev.includes(id)){
-
-        return prev.filter(
-          x=>x!==id
-        )
-
-      }
-
-      return [...prev,id]
-
-    })
-
-  }
-
-  const save = async()=>{
+    if(saving) return
 
     try{
 
-      for(const playlist of playlists){
+      setSaving(true)
 
-        const isSelected =
-          selected.includes(playlist.id)
-
-        const wasIncluded =
-          playlist.included
-
-        if(isSelected && !wasIncluded){
-
-          await authfetch(
-            `/playlists/${playlist.id}/add/one?song_id=${songId}`,
-            {
-              method:"POST"
-            }
-          )
-
-        }
-
-        if(!isSelected && wasIncluded){
-
-          await authfetch(
-            `/playlists/${playlist.id}/remove?song_id=${songId}`,
-            {
-              method:"DELETE"
-            }
-          )
-
-        }
-
-      }
+      await authfetch(
+        `/playlists/${playlist.id}/add/one?song_id=${songId}`,
+        { method:"POST" }
+      )
 
       onSaved?.()
-      onClose()
+      onClose?.()
 
     }catch(err){
 
       console.error(err)
 
+    }finally{
+
+      setSaving(false)
+
     }
 
-  }
+}
 
   return(
 
@@ -147,29 +104,27 @@ export default function PlaylistEditor({
             </div>
 
           ) : (
-            playlists.map(p => (
+            availablePlaylists.map(p => (
               <div
                 key={p.id}
-                className={
-                  selected.includes(p.id)
-                    ? "playlist-item active"
-                    : "playlist-item"
-                }
-                onClick={() => togglePlaylist(p.id)}
+                className= "playlist-item"
+                onClick={async () => {
+                  await togglePlaylist(p)
+                }}
               >
                 <PlaylistCard playlist={p}/>
               </div>
             ))
 
           )}
+
+          {!loading && availablePlaylists.length === 0 && (
+            <div className="playlist-loading">
+              No available playlists
+            </div>
+          )}
           
         </div>
-        <button
-          className="playlist-editor-confirm"
-          onClick={save}
-        >
-          Confirm
-        </button>
 
       </div>
 

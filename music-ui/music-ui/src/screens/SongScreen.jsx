@@ -326,6 +326,7 @@ export default function SongScreen({
         {showPlaylistEditor && (
           <PlaylistEditor
             songId={song.id}
+            includedPlaylists={playlists}
             onClose={()=>
               setShowPlaylistEditor(false)
             }

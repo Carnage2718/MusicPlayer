@@ -114,6 +114,24 @@ export default function SearchPicker({
 
   },[open, defaultArtist])
 
+  useEffect(()=>{
+
+    if(open) return
+
+    setQuery("")
+    setResults([])
+
+    setGlobalResults({
+      songs: [],
+      artists: [],
+      albums: [],
+      playlists: []
+    })
+
+    setSelectedIndex(0)
+
+  },[open])
+
 
   useEffect(()=>{
 
