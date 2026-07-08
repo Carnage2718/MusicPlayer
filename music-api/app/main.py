@@ -22,11 +22,13 @@ app = FastAPI(
 
 #render: 
 #   allow_origins=["https://musicplayer-emw9.onrender.com"] 
+
+#local:
 #   allow_origins=["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://musicplayer-emw9.onrender.com"] 
+    allow_origins=["https://musicplayer-emw9.onrender.com"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
