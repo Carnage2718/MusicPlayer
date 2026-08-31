@@ -1,4 +1,33 @@
 /* =========================
+   HEADER ACTIONS
+========================= */
+
+.home-header-actions{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:16px;
+}
+
+.home-debug-button{
+
+  cursor:pointer;
+
+  transition:
+    transform .15s ease,
+    opacity .15s ease;
+}
+
+.home-debug-button:active{
+
+  transform:scale(.88);
+
+  opacity:.7;
+}
+
+/* =========================
 Home Sections
 ========================= */
 .bottom-countermeasure{

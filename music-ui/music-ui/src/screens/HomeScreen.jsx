@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react"
-import { Play, Music, LogOut } from "lucide-react"
+import { Play, Music, LogOut, Settings } from "lucide-react"
 import API_BASE, { authfetch }from "../api"
 import { useSongs } from "../context/SongsContext"
 import AppHeader from "../components/AppHeader"
@@ -10,7 +10,8 @@ import "./HomeScreen.css"
 export default function HomeScreen({
   onSelectSong,
   openArtist,
-  openAlbum
+  openAlbum,
+  onOpenDebug
 }) {
 
   const { playFrom, homeData, setHomeData } = useSongs()
@@ -154,14 +155,26 @@ export default function HomeScreen({
       <AppHeader 
         title="Home"
         rightAction={
-          <LogOut
-            size={20}
-            onClick={()=>{
-              localStorage.clear()
-              sessionStorage.clear()
-              window.location.reload()
-            }}
-          />
+          <div className="home-header-actions">
+            <Settings
+              size={20}
+              className="home-debug-button"
+              onClick={() => {
+                onOpenDebug && onOpenDebug()
+              }}
+            />
+          
+            <LogOut
+              size={20}
+              onClick={()=>{
+                localStorage.clear()
+                sessionStorage.clear()
+                window.location.reload()
+              }}
+            />
+
+          </div>
+          
         } 
       />
 

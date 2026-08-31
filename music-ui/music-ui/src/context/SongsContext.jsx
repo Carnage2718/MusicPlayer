@@ -2,9 +2,17 @@ import { createContext, useContext, useEffect, useRef, useState } from "react"
 import API_BASE, {
   authfetch
 } from "../api"
+import {
+  debugStart,
+  debugProgress,
+  debugError,
+  replaceWithComplete,
+  DEBUG_PROGRESS,
+  DEBUG_ERROR
+} from "../utils/DebugLogger"
+
 
 const SongsContext = createContext()
-
 
 export function SongsProvider({ children }) {
 
@@ -68,7 +76,9 @@ export function SongsProvider({ children }) {
   const changingTrackRef = useRef(false)
   const loadSongIdRef = useRef(0)
 
-  
+  const playbackSessionRef = useRef(null)
+  const queueSessionRef = useRef(null)
+
   /* =========================
      audioref init
   ========================= */
@@ -132,7 +142,6 @@ export function SongsProvider({ children }) {
       setHistoryMeta(data)
 
     } catch (e) {
-      console.error(e)
     }
   }
 
@@ -145,7 +154,7 @@ export function SongsProvider({ children }) {
      QUEUE APPLY（最重要）
   ========================= */
 
-  const applyQueue = (data) => {
+  const applyQueue = (data, source = "unknown") => {
 
     if (data.current !== undefined) {
       setCurrentId(data.current)
@@ -165,7 +174,7 @@ export function SongsProvider({ children }) {
       .then(res => res.json())
       .then(data => {
 
-        applyQueue(data)
+        applyQueue(data,"INIT")
 
         if (data.current) {
           userInteracted.current = true
@@ -181,41 +190,98 @@ export function SongsProvider({ children }) {
 
   const getSongMeta = async (id) => {
 
-    if (songCache.current[id]) return songCache.current[id]
-
-    const res = await authfetch(`/songs/${id}`)
-    const data = await res.json()
-
-    const song = {
-      song_id: id,
-      title: data.title,
-      artists: data.artists,
-      image: data.cover,
-      url: null
+    if (songCache.current[id]) {
+      return songCache.current[id]
     }
 
-    songCache.current[id] = song
-    return song
+    try{
+
+      const res = 
+        await authfetch(`/songs/${id}`)
+      
+        if (!res.ok) {
+          throw new Error(
+            `HTTP ${res.status}`
+          )
+        }
+      const data = 
+        await res.json()
+
+      const song = {
+        song_id: id,
+        title: data.title,
+        artists: data.artists,
+        image: data.cover,
+        url: null
+      }
+
+      songCache.current[id] = song
+      return song
+    } catch (e) {
+
+      debugError(
+        "PLAYBACK",
+        DEBUG_ERROR.PLAYBACK.META,
+        e,
+        id
+      )
+
+      throw e
+
+    }
   }
 
   /* =========================
      STREAM
   ========================= */
   const getStream = async (id) => {
+
+    if (streamCache.current[id]) {
+      return streamCache.current[id]
+    }
+
     try {
-      if (streamCache.current[id]) return streamCache.current[id]
 
-      const res = await authfetch(`/songs/${id}/stream`)
-      if (!res.ok) throw new Error()
+      const res =
+        await authfetch(`/songs/${id}/stream`)
 
-      const data = await res.json()
+      if (!res.ok) {
 
-      streamCache.current[id] = data.stream_url
+        throw new Error(
+          `HTTP ${res.status}`
+        )
+
+      }
+
+      const data =
+        await res.json()
+
+      if (!data.stream_url) {
+
+        throw new Error(
+          "stream_url missing"
+        )
+
+      }
+
+      streamCache.current[id] =
+        data.stream_url
+
       return data.stream_url
 
-    } catch {
-      return null // 🔥 安全
+    } catch (e) {
+
+      debugError(
+        "PLAYBACK",
+        DEBUG_ERROR.PLAYBACK.STREAM,
+        e,
+        id
+      )
+
+      throw e
+
     }
+
   }
 
   /* =========================
@@ -239,92 +305,117 @@ export function SongsProvider({ children }) {
     
     const load = async () => {
 
-      console.log("LOAD START", currentId)
-
       const id = currentId
 
-      const meta = await getSongMeta(id)
+      const session = 
+        debugStart("PLAYBACK", id)
 
-      console.log("META OK", id)
+      playbackSessionRef.current = session
 
-      let stream =
-        nextCache.current[id] ||
-        streamCache.current[id]
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.LOADING
+      )
 
-      if (!stream) {
-        stream = await getStream(id)
-      }
+      try {
+        const meta = await getSongMeta(id)
 
-      console.log("STREAM", stream)
+        let stream =
+          nextCache.current[id] ||
+          streamCache.current[id]
 
-      if (cancelled || id !== currentIdRef.current) {
-        console.log("CANCELLED")
-        return
-      }
-
-      const audio = audioRef.current
-
-      if (audio.src !== stream) {
-
-        console.log("SET SRC")
-
-        audio.pause()
-        audio.currentTime = 0
-        audio.src = stream
-        audio.load()
-
-        await Promise.race([
-          new Promise(resolve => {
-
-            if (audio.readyState >= 3) {
-              resolve()
-              return
-            }
-
-            const handler = () => {
-              audio.removeEventListener("canplay", handler)
-              resolve()
-            }
-
-            audio.addEventListener("canplay", handler)
-
-          }),
-
-          new Promise(resolve =>
-            setTimeout(resolve, 5000)
-          )
-        ])
-
-        console.log("CANPLAY FINISHED")
-        
-      }
-
-      const song = { ...meta, url: stream }
-      setCurrent(song)
-
-      console.log("SET CURRENT")
-
-      if (
-        cancelled ||
-        myLoadId !== loadSongIdRef.current
-      ){
-        return
-      }
-
-      console.log("USER_INTERACTED", userInteracted.current)
-
-      if (userInteracted.current) {
-
-        console.log("PLAY START")
-
-        try {
-          await audio.play()
-          console.log("PLAY SUCCESS")
-          setIsPlaying(true)
-        } catch (e) {
-          setIsPlaying(false)
-          console.error("PLAY ERROR", e)
+        if (!stream) {
+          stream = await getStream(id)
         }
+
+        if (!stream) {
+
+          throw new Error(
+            "stream url unavailable"
+          )
+        }
+
+        if (cancelled || id !== currentIdRef.current) {
+          return
+        }
+
+        const audio = audioRef.current
+
+        if (audio.src !== stream) {
+
+
+          audio.pause()
+          audio.currentTime = 0
+          audio.src = stream
+          audio.load()
+
+          await Promise.race([
+            new Promise(resolve => {
+
+              if (audio.readyState >= 3) {
+                resolve()
+                return
+              }
+
+              const handler = () => {
+                audio.removeEventListener("canplay", handler)
+                resolve()
+              }
+
+              audio.addEventListener("canplay", handler)
+
+            }),
+
+            new Promise(resolve =>
+              setTimeout(resolve, 5000)
+            )
+          ])
+  
+        }
+
+        const song = { ...meta, url: stream }
+        setCurrent(song)
+
+        if (
+          cancelled ||
+          myLoadId !== loadSongIdRef.current
+        ){
+          return
+        }
+
+        if (userInteracted.current) {
+
+          try {
+            await audio.play()
+
+            debugProgress(
+              playbackSessionRef.current,
+              DEBUG_PROGRESS.PLAYBACK.PLAY_START
+            )
+            setIsPlaying(true)
+
+          } catch (e) {
+
+            debugError(
+              "PLAYBACK",
+              DEBUG_ERROR.PLAYBACK.PLAY,
+              e,
+              id
+            )
+
+            setIsPlaying(false)
+
+          }
+        }
+      } catch (e) {
+
+        debugError(
+          "PLAYBACK",
+          DEBUG_ERROR.PLAYBACK.META,
+          e,
+          id
+        )
+        setIsPlaying(false)
       }
     }
 
@@ -354,17 +445,14 @@ export function SongsProvider({ children }) {
 
     const load = async () => {
 
-      // 先頭20件
       const first = await Promise.all(
         queueIds.slice(0, 20).map(getSongMeta)
       )
 
-      // 🔥 古いロード破棄
       if (loadId !== queueLoadIdRef.current) return
 
       setQueue(first)
 
-      // 残り
       const rest = queueIds.slice(20)
 
       for (let id of rest) {
@@ -418,14 +506,13 @@ export function SongsProvider({ children }) {
 
     if (isPlaying) {
 
-      audio.play().catch(() => {
-        setIsPlaying(false)
-      })
+      audio.play()
+        .catch(e => {
+          setIsPlaying(false)
+        })
 
     } else {
-
       audio.pause()
-
     }
 
   }, [isPlaying])
@@ -455,12 +542,24 @@ export function SongsProvider({ children }) {
 
           countedRef.current = true
 
+          debugProgress(
+            playbackSessionRef.current,
+            DEBUG_PROGRESS.PLAYBACK.HALF
+          )
+
           authfetch(
             `/songs/${currentId}/play`,
             { method:"POST" }
           )
           .then(loadHistory)
-          .catch(()=>{})
+          .catch(e => {
+            debugError(
+              "PLAYBACK",
+              DEBUG_ERROR.PLAYBACK.HALF,
+              e,
+              currentId
+            )
+          })
 
         }
 
@@ -495,49 +594,121 @@ export function SongsProvider({ children }) {
     ignoreRepeatOne = false
   } = {}) => {
 
-    console.log("NEXT SONG")
+    const session =
+      debugStart(
+        "QUEUE",
+        currentIdRef.current
+      )
 
-    const res = await authfetch(
-      `/queue/next?ignore_repeat_one=${ignoreRepeatOne}`, 
-      {
-        method: "POST"
-      }
+    queueSessionRef.current = session
+
+    debugProgress(
+      session,
+      DEBUG_PROGRESS.QUEUE.REQUEST
     )
 
-    console.log("NEXT RESPONSE")
+    try {
 
-    const data = await res.json()
+      const res =  await authfetch(
+        `/queue/next?ignore_repeat_one=${ignoreRepeatOne}`, 
+        {
+          method: "POST"
+        }
+      )
 
+      if (!res.ok) {
 
-    if (data.restart) {
+        throw new Error(
+          `HTTP ${res.status}`
+        )
+      }
 
-      const audio = audioRef.current
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.QUEUE.RESPONSE
+      )
 
-      audio.currentTime = 0
+      const data = await res.json()
 
-      try {
-        await audio.play()
-      } catch {}
+      if (data.restart) {
 
-      setIsPlaying(true)
+        const audio = audioRef.current
 
-      return
-    }
+        audio.currentTime = 0
 
-    applyQueue(data)
+        try {
+          await audio.play()
 
-    console.log("APPLY DONE")
-    
-    if(!data.current){
-      const audio = audioRef.current
+          setIsPlaying(true)
+
+        } catch (e) {
+
+          debugError(
+            "PLAYBACK",
+            DEBUG_ERROR.PLAYBACK.PLAY,
+            e,
+            currentIdRef.current
+          )
+
+          setIsPlaying(false)
+        }
+
+        replaceWithComplete(
+          session,
+          DEBUG_PROGRESS.QUEUE.COMPLETE
+        )
+
+        queueSessionRef.current = null
+
+        return
+      }
+
+      applyQueue(data, "NEXT")
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.QUEUE.APPLY
+      )
       
-      audio.pause()
-      audio.currentTime = 0
+      if(!data.current){
 
-      setIsPlaying(false)
+        const audio = audioRef.current
+        
+        audio.pause()
+        audio.currentTime = 0
 
-      return
+        setIsPlaying(false)
+
+        replaceWithComplete(
+          session,
+          DEBUG_PROGRESS.QUEUE.COMPLETE
+        )
+
+        queueSessionRef.current = null
+
+        return
+      }
+
+      replaceWithComplete(
+        session,
+        DEBUG_PROGRESS.QUEUE.COMPLETE
+      )
+
+      queueSessionRef.current = null
+
+    } catch (e) {
+
+      debugError(
+        "QUEUE",
+        DEBUG_ERROR.QUEUE.REQUEST,
+        e,
+        currentIdRef.current
+      )
+
+      queueSessionRef.current = null
+
     }
+      
 
   }
 
@@ -548,14 +719,25 @@ export function SongsProvider({ children }) {
 
   const prevSong = async () => {
 
-    const res = await authfetch("/queue/previous", {
-      method: "POST"
-    })
+    try{
 
-    const data = await res.json()
+      const res = await authfetch("/queue/previous", {
+        method: "POST"
+      })
 
-    applyQueue(data)
+      const data = await res.json()
 
+      applyQueue(data, "PREV")
+
+    } catch (e) {
+
+      debugError(
+        "QUEUE",
+        DEBUG_ERROR.QUEUE.REQUEST,
+        e,
+        "previous"
+      )
+    }
   }
 
   /* =========================
@@ -566,28 +748,63 @@ export function SongsProvider({ children }) {
 
     const id = song.song_id || song.id
 
-    userInteracted.current = true
+    const session =
+      debugStart(
+        "PLAY_ACTION",
+        id
+      )
 
-    const data = await authfetch(
-      `/queue/play/${id}`,
-      {
-        method: "POST"
+    debugProgress(
+      session,
+      DEBUG_PROGRESS.PLAY_ACTION.REQUEST
+    )
+
+    try {
+
+      userInteracted.current = true
+
+      const res = await authfetch(
+        `/queue/play/${id}`,
+        {
+          method: "POST"
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error(
+          `HTTP ${res.status}`
+        )
       }
-    ).then(r => r.json())
 
-    audioRef.current.pause()
+      const data = await res.json()
 
-    applyQueue(data)
+      audioRef.current.pause()
 
-    setProgress(0)
+      applyQueue(data, "PLAY_SONG")
 
-    if (data.current){
-      setCurrent({
-        song_id:data.current,
-        title:"Loading...",
-        artists: [],
-        image: null
-      })
+      setProgress(0)
+
+      if (data.current){
+        setCurrent({
+          song_id:data.current,
+          title:"Loading...",
+          artists: [],
+          image: null
+        })
+      }
+
+      replaceWithComplete(
+        session,
+        DEBUG_PROGRESS.PLAY_ACTION.COMPLETE
+      )
+    } catch (e) {
+
+      debugError(
+        "PLAY_ACTION",
+        DEBUG_ERROR.PLAY_ACTION.REQUEST,
+        e,
+        id
+      )
     }
   }
 
@@ -597,12 +814,45 @@ export function SongsProvider({ children }) {
 
   const shuffleQueue = async () => {
 
-    const res = await authfetch("/queue/shuffle", {
-      method: "POST"
-    })
+    const session =
+    debugStart(
+      "SHUFFLE",
+      "queue"
+    )
 
-    const data = await res.json()
-    applyQueue(data)
+    debugProgress(
+      session,
+      DEBUG_PROGRESS.SHUFFLE.REQUEST
+    )
+
+    try{
+      const res = await authfetch("/queue/shuffle", {
+        method: "POST"
+      })
+
+      if (!res.ok) {
+        throw new Error(
+          `HTTP ${res.status}`
+        )
+      }
+
+      const data = await res.json()
+
+      applyQueue(data, "SHUFFLE")
+
+      replaceWithComplete(
+        session,
+        DEBUG_PROGRESS.SHUFFLE.COMPLETE
+      )
+    } catch (e) {
+
+      debugError(
+        "SHUFFLE",
+        DEBUG_ERROR.SHUFFLE.REQUEST,
+        e,
+        "queue"
+      )
+    }
   }
 
   /* =========================
@@ -612,7 +862,7 @@ export function SongsProvider({ children }) {
   useEffect(() => {
 
     const handler = (e) => {
-      applyQueue(e.detail)
+      applyQueue(e.detail, "QUEUE_EVENT")
     }
 
     window.addEventListener("queueApply", handler)
@@ -633,9 +883,14 @@ export function SongsProvider({ children }) {
 
     const ended = async () => {
 
-      console.log("ENDED", changingTrackRef.current)
-
       if (changingTrackRef.current) return
+
+      replaceWithComplete(
+        playbackSessionRef.current,
+        DEBUG_PROGRESS.PLAYBACK.COMPLETE
+      )
+
+      playbackSessionRef.current = null
 
       changingTrackRef.current = true
 
@@ -651,14 +906,6 @@ export function SongsProvider({ children }) {
 
       }
     }
-
-    audio.addEventListener("pause", () => {
-      console.log(
-        "PAUSE",
-        audio.currentTime,
-        audio.duration
-      )
-    })
 
     audio.addEventListener("ended",ended)
 
@@ -678,7 +925,6 @@ export function SongsProvider({ children }) {
       })
 
     } catch (e) {
-      console.error(e)
     }
   }
 
@@ -707,11 +953,18 @@ export function SongsProvider({ children }) {
       const firstId = data.current
       if (!firstId) return
 
-      applyQueue(data)
+      applyQueue(data, "PLAY_FROM")
       setProgress(0)
 
     } catch (e) {
-      console.error(e)
+
+      debugError(
+        "QUEUE",
+        DEBUG_ERROR.PLAY_FROM.REQUEST,
+        e,
+        endpoint
+      )
+
     } finally {
       isStartingRef.current = false
     }

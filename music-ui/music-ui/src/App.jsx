@@ -20,6 +20,7 @@ import AlbumScreen from "./screens/AlbumScreen"
 import CreateAlbumScreen from "./screens/CreateAlbumScreen"
 import GenreScreen from "./screens/GenreScreen"
 import LoginScreen from "./screens/LoginScreen"
+import DebugLogScreen from "./screens/DebugLogScreen"
 
 import MiniPlayer from "./components/MiniPlayer"
 import BottomNav from "./components/BottomNav"
@@ -225,6 +226,14 @@ function AppContent() {
           />
         )
 
+      case "debug":
+
+        return(
+          <DebugLogScreen
+            onBack={() => setCurrentScreen("home")}
+          />
+        )
+
       default:
 
         return(
@@ -232,6 +241,7 @@ function AppContent() {
             onSelectSong={playSong}
             openAlbum={openAlbum}
             openArtist={openArtist}
+            onOpenDebug={()=>setCurrentScreen("debug")}
           />
         )
 

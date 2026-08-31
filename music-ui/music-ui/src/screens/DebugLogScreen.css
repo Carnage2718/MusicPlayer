@@ -1,0 +1,576 @@
+/* =========================
+   ROOT
+========================= */
+
+.debug-log-screen {
+
+  width: 100%;
+  height: 100%;
+
+  background:
+    radial-gradient(
+      circle at 50% -20%,
+      rgba(48,255,122,.06),
+      transparent 45%
+    );
+
+}
+
+
+/* =========================
+   CONTAINER
+========================= */
+
+.debug-log-container {
+
+  width: 100%;
+  height: calc(100% - 60px);
+
+  box-sizing: border-box;
+
+  padding: 14px 14px 30px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  scrollbar-width: none;
+
+}
+
+.debug-log-container::-webkit-scrollbar {
+
+  display: none;
+
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.debug-console-header {
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+
+}
+
+
+.debug-console-heading {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+}
+
+
+.debug-console-icon {
+
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: rgba(48,255,122,.08);
+
+  color: #30ff7a;
+
+  border: 1px solid rgba(48,255,122,.15);
+
+}
+
+
+.debug-console-title {
+
+  color: #fff;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  letter-spacing: -.02em;
+
+}
+
+
+.debug-console-subtitle {
+
+  margin-top: 3px;
+
+  color: #555;
+
+  font-size: 9px;
+
+  letter-spacing: .12em;
+
+}
+
+
+/* =========================
+   ACTIONS
+========================= */
+
+.debug-console-actions {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+}
+
+
+.debug-clear-button,
+.debug-back-button {
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  border: 1px solid #252525;
+
+  background: #151515;
+
+  color: #aaa;
+
+  padding: 7px 10px;
+
+  border-radius: 8px;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  letter-spacing: .04em;
+
+  cursor: pointer;
+
+}
+
+
+.debug-clear-button:active,
+.debug-back-button:active {
+
+  transform: scale(.96);
+
+}
+
+
+/* =========================
+   SYSTEM BAR
+========================= */
+
+.debug-system-bar {
+
+  height: 32px;
+
+  box-sizing: border-box;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding: 0 10px;
+
+  margin-bottom: 10px;
+
+  border: 1px solid #1d1d1d;
+
+  border-radius: 8px;
+
+  background: #0d0d0d;
+
+}
+
+
+.debug-system-status {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  color: #666;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: .08em;
+
+}
+
+
+.debug-status-dot {
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #30ff7a;
+
+  box-shadow:
+    0 0 8px rgba(48,255,122,.6);
+
+}
+
+
+.debug-log-count {
+
+  color: #444;
+
+  font-size: 9px;
+
+  font-family: monospace;
+
+}
+
+
+/* =========================
+   LOG LIST
+========================= */
+
+.debug-log-list {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+
+}
+
+
+/* =========================
+   LOG CARD
+========================= */
+
+.debug-log-card {
+
+  position: relative;
+
+  padding: 13px 14px;
+
+  border-radius: 8px;
+
+  background: #050505;
+
+  border: 1px solid #1b1b1b;
+
+  overflow: hidden;
+
+  font-family:
+    "SFMono-Regular",
+    Consolas,
+    "Liberation Mono",
+    monospace;
+
+}
+
+
+.debug-log-card::before {
+
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 2px;
+
+}
+
+
+.debug-log-card.active::before {
+  background: #ffaa00;
+}
+
+.debug-log-card.complete::before {
+  background: #30ff7a;
+}
+
+.debug-log-card.error::before {
+  background: #ff4545;
+}
+
+
+/* =========================
+   TOP
+========================= */
+
+.debug-log-card-top {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+}
+
+
+.debug-log-event {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+}
+
+
+.debug-log-type {
+
+  color: #fff;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: .03em;
+
+}
+
+
+.debug-log-number {
+
+  color: #777;
+
+  font-size: 11px;
+
+}
+
+
+/* =========================
+   ACTIVE LOADER
+========================= */
+
+.debug-active-loader {
+
+  color: #ffaa00;
+
+  animation:
+    debug-spin .8s linear infinite;
+
+}
+
+
+@keyframes debug-spin {
+
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+
+}
+
+
+/* =========================
+   STATUS
+========================= */
+
+.debug-log-status-badge {
+
+  display: flex;
+
+  align-items: center;
+
+  padding: 3px 6px;
+
+  border-radius: 4px;
+
+  font-size: 8px;
+
+  font-weight: 700;
+
+  letter-spacing: .08em;
+
+}
+
+
+.debug-log-status-badge.active {
+
+  color: #ffaa00;
+
+  background: rgba(255,170,0,.07);
+
+}
+
+
+.debug-log-status-badge.complete {
+
+  color: #30ff7a;
+
+  background: rgba(48,255,122,.07);
+
+}
+
+
+.debug-log-status-badge.error {
+
+  color: #ff5555;
+
+  background: rgba(255,70,70,.07);
+
+}
+
+
+/* =========================
+   TARGET
+========================= */
+
+.debug-log-target {
+
+  margin-top: 7px;
+
+  color: #666;
+
+  font-size: 10px;
+
+}
+
+
+/* =========================
+   PROGRESS
+========================= */
+
+.debug-log-progress {
+
+  margin-top: 11px;
+
+  padding-left: 8px;
+
+  border-left: 1px solid #202020;
+
+}
+
+
+.debug-progress-line {
+
+  position: relative;
+
+  padding: 2px 0;
+
+  color: #ddd;
+
+  font-size: 10px;
+
+  line-height: 1.55;
+
+}
+
+
+/* terminal風の > */
+
+.debug-progress-line::before {
+
+  content: "> ";
+
+  color: #444;
+
+}
+
+
+.complete-line {
+
+  color: #30ff7a;
+
+}
+
+
+/* =========================
+   ICON
+========================= */
+
+.debug-complete-icon {
+
+  color: #30ff7a;
+
+}
+
+
+.debug-error-icon {
+
+  color: #ff5555;
+
+}
+
+
+/* =========================
+   ERROR
+========================= */
+
+.debug-log-error-message {
+
+  margin-top: 10px;
+
+  padding: 9px;
+
+  border-radius: 5px;
+
+  background: #0b0707;
+
+  border: 1px solid rgba(255,70,70,.12);
+
+  color: #ff6666;
+
+  font-size: 10px;
+
+  line-height: 1.5;
+
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+.debug-log-footer {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-top: 11px;
+
+  padding-top: 8px;
+
+  border-top: 1px solid #151515;
+
+  color: #3f3f3f;
+
+  font-size: 8px;
+
+}
