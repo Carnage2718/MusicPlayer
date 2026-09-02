@@ -46,7 +46,24 @@ export const DEBUG_PROGRESS = {
 
     ENDED: 23,
 
-    COMPLETE: 24
+    COMPLETE: 24,
+
+    /* =========================
+      AUDIO EVENTS
+    ========================= */
+
+    LOADSTART: 25,
+    LOADEDMETADATA: 26,
+    LOADEDDATA: 27,
+    DURATIONCHANGE: 28,
+
+    PLAY_EVENT: 29,
+    PLAYING_EVENT: 30,
+
+    ABORT: 31,
+    EMPTIED: 32,
+
+    ERROR_EVENT: 33
   },
 
 
@@ -129,31 +146,47 @@ export const DEBUG_TEXT = {
 
   5: "stream cache hit",
   6: "stream request",
-  7: "stream loaded",
+  7: "stream response",
+  8: "stream loaded",
 
-  8: "audio src set",
-  9: "audio load",
+  9: "audio src set",
+  10: "audio load",
 
-  10: "canplay",
-  11: "canplaythrough",
+  11: "canplay",
+  12: "canplaythrough",
 
-  12: "play request",
-  13: "play start",
-  14: "playing",
+  13: "play request",
+  14: "play start",
+  15: "playing",
 
-  15: "50% history + play count",
+  16: "50% history + play count",
 
-  16: "pause",
-  17: "waiting",
-  18: "stalled",
-  19: "suspend",
+  17: "pause",
+  18: "waiting",
+  19: "stalled",
+  20: "suspend",
 
-  20: "seeking",
-  21: "seeked",
+  21: "seeking",
+  22: "seeked",
 
-  22: "ended",
+  23: "ended",
 
-  23: "play complete",
+  24: "play complete",
+
+  /* AUDIO EVENTS */
+
+  25: "audio loadstart",
+  26: "audio loadedmetadata",
+  27: "audio loadeddata",
+  28: "audio durationchange",
+
+  29: "audio play event",
+  30: "audio playing event",
+
+  31: "audio abort",
+  32: "audio emptied",
+
+  33: "audio error event",
 
 
   /* QUEUE */

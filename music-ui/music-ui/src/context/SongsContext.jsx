@@ -693,22 +693,29 @@ export function SongsProvider({ children }) {
 
         currentTime:
           Number.isFinite(audio.currentTime)
-            ? audio.currentTime
+            ? Number(audio.currentTime.toFixed(2))
             : null,
 
         duration:
           Number.isFinite(audio.duration)
-            ? audio.duration
+            ? Number(audio.duration.toFixed(2))
             : null,
 
         errorCode:
           mediaError?.code ?? null,
 
         errorMessage:
-          mediaError?.message ?? null
+          mediaError?.message ?? null,
+
+        srcExists:
+          !!audio.src,
+
+        src:
+          audio.src
+            ? audio.src.split("?")[0]
+            : null
       }
     }
-
 
     const onLoadStart = () => {
 
@@ -914,16 +921,29 @@ export function SongsProvider({ children }) {
         details
       )
 
+      const mediaError = audio.error
+
+      const error = new Error(
+        mediaError
+          ? `MediaError code ${mediaError.code}`
+          : "audio error event"
+      )
+
+      error.name =
+        mediaError?.code === 1
+          ? "MEDIA_ERR_ABORTED"
+          : mediaError?.code === 2
+          ? "MEDIA_ERR_NETWORK"
+          : mediaError?.code === 3
+          ? "MEDIA_ERR_DECODE"
+          : mediaError?.code === 4
+          ? "MEDIA_ERR_SRC_NOT_SUPPORTED"
+          : "MEDIA_ERR_UNKNOWN"
+
       debugError(
         "PLAYBACK",
         DEBUG_ERROR.PLAYBACK.AUDIO,
-        audio.error
-          ? {
-              message:
-                audio.error.message ||
-                `MediaError code ${audio.error.code}`
-            }
-          : new Error("audio error event"),
+        error,
         currentIdRef.current
       )
     }
