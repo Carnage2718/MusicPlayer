@@ -78,6 +78,9 @@ export function SongsProvider({ children }) {
 
   const playbackSessionRef = useRef(null)
   const queueSessionRef = useRef(null)
+  const playbackSongIdRef = useRef(null)
+  const playbackGenerationRef = useRef(0)
+  const queueGenerationRef = useRef(0)
 
   /* =========================
      audioref init
@@ -156,8 +159,24 @@ export function SongsProvider({ children }) {
 
   const applyQueue = (data, source = "unknown") => {
 
+    const previousCurrent = currentIdRef.current
+    const nextCurrent = data.current
+
+    if (
+      queueSessionRef.current &&
+      nextCurrent !== undefined
+    ) {
+
+      debugProgress(
+        queueSessionRef.current,
+        DEBUG_PROGRESS.QUEUE.UPDATE
+      )
+    }
+
     if (data.current !== undefined) {
-      setCurrentId(data.current)
+      if (data.current !== currentIdRef.current) {
+        setCurrentId(data.current)
+      }
     }
 
     if (data.queue !== undefined) {
@@ -188,10 +207,27 @@ export function SongsProvider({ children }) {
      SONG META
   ========================= */
 
-  const getSongMeta = async (id) => {
+  const getSongMeta = async (id, session = null) => {
 
     if (songCache.current[id]) {
+
+      if (session) {
+
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.META_CACHE_HIT
+        )
+      }
+
       return songCache.current[id]
+    }
+
+    if (session) {
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.META_REQUEST
+      )
     }
 
     try{
@@ -204,6 +240,7 @@ export function SongsProvider({ children }) {
             `HTTP ${res.status}`
           )
         }
+
       const data = 
         await res.json()
 
@@ -216,7 +253,17 @@ export function SongsProvider({ children }) {
       }
 
       songCache.current[id] = song
+
+      if (session) {
+
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.META_LOADED
+        )
+
+      }
       return song
+      
     } catch (e) {
 
       debugError(
@@ -234,10 +281,28 @@ export function SongsProvider({ children }) {
   /* =========================
      STREAM
   ========================= */
-  const getStream = async (id) => {
+  const getStream = async (id, session = null) => {
 
     if (streamCache.current[id]) {
+
+      if (session) {
+
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.STREAM_CACHE_HIT
+        )
+
+      }
+
       return streamCache.current[id]
+    }
+
+    if (session) {
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.STREAM_REQUEST
+      )
     }
 
     try {
@@ -251,6 +316,13 @@ export function SongsProvider({ children }) {
           `HTTP ${res.status}`
         )
 
+      }
+
+      if (session) {
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.STREAM_RESPONSE
+        )
       }
 
       const data =
@@ -267,6 +339,14 @@ export function SongsProvider({ children }) {
       streamCache.current[id] =
         data.stream_url
 
+      if (session) {
+
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.STREAM_LOADED
+        )
+      }
+      
       return data.stream_url
 
     } catch (e) {
@@ -297,35 +377,65 @@ export function SongsProvider({ children }) {
     }
     setProgress(0)
 
-    currentIdRef.current = currentId
+    const id = currentId
+
+    if (
+      playbackSongIdRef.current === id &&
+      playbackSessionRef.current
+    ) {
+      currentIdRef.current = id
+      return
+    }
+
+    currentIdRef.current = id
 
     let cancelled = false
 
     const myLoadId= ++loadSongIdRef.current
+
+    const generation = ++playbackGenerationRef.current
+
+    const session = 
+      debugStart(
+        "PLAY",
+        id
+      )
+
+    playbackSessionRef.current =session
+    playbackSongIdRef.current = id
+
+    debugProgress(
+      session,
+      DEBUG_PROGRESS.PLAYBACK.CURRENT
+    )
     
     const load = async () => {
 
       const id = currentId
 
-      const session = 
-        debugStart("PLAYBACK", id)
-
-      playbackSessionRef.current = session
-
-      debugProgress(
-        session,
-        DEBUG_PROGRESS.PLAYBACK.LOADING
-      )
-
       try {
-        const meta = await getSongMeta(id)
+        const meta = await getSongMeta(id, session)
 
         let stream =
           nextCache.current[id] ||
           streamCache.current[id]
+        
+        if (stream) {
+
+          debugProgress(
+            session,
+            DEBUG_PROGRESS.PLAYBACK.STREAM_CACHE_HIT
+          )
+        } else {
+
+          stream = await getStream(
+            id,
+            session
+          )
+        }
 
         if (!stream) {
-          stream = await getStream(id)
+          stream = await getStream(id, session)
         }
 
         if (!stream) {
@@ -347,28 +457,49 @@ export function SongsProvider({ children }) {
           audio.pause()
           audio.currentTime = 0
           audio.src = stream
+
+          debugProgress(
+            session,
+            DEBUG_PROGRESS.PLAYBACK.AUDIO_SRC_SET
+          )
+
           audio.load()
+
+          debugProgress(
+            session,
+            DEBUG_PROGRESS.PLAYBACK.AUDIO_LOAD
+          )
 
           await Promise.race([
             new Promise(resolve => {
 
               if (audio.readyState >= 3) {
-                resolve()
+                debugProgress(
+                  session,
+                  DEBUG_PROGRESS.PLAYBACK.CANPLAY
+                )
+                resolve("ready")
                 return
               }
 
               const handler = () => {
                 audio.removeEventListener("canplay", handler)
-                resolve()
+                debugProgress(
+                  session,
+                  DEBUG_PROGRESS.PLAYBACK.CANPLAY
+                )
+                resolve("canplay")
               }
 
               audio.addEventListener("canplay", handler)
 
             }),
 
-            new Promise(resolve =>
-              setTimeout(resolve, 5000)
-            )
+            new Promise(resolve => {
+              setTimeout(() => {
+                resolve("timeout")
+              }, 5000)
+            })
           ])
   
         }
@@ -386,12 +517,22 @@ export function SongsProvider({ children }) {
         if (userInteracted.current) {
 
           try {
+            
+            const session =
+              playbackSessionRef.current
+
             await audio.play()
 
-            debugProgress(
-              playbackSessionRef.current,
-              DEBUG_PROGRESS.PLAYBACK.PLAY_START
-            )
+            if (
+              session &&
+              playbackSessionRef.current ===session
+            ) {
+              debugProgress(
+                playbackSessionRef.current,
+                DEBUG_PROGRESS.PLAYBACK.PLAY_START
+              )
+            }
+
             setIsPlaying(true)
 
           } catch (e) {
@@ -446,7 +587,7 @@ export function SongsProvider({ children }) {
     const load = async () => {
 
       const first = await Promise.all(
-        queueIds.slice(0, 20).map(getSongMeta)
+        queueIds.slice(0, 20).map(id => getSongMeta(id))
       )
 
       if (loadId !== queueLoadIdRef.current) return
@@ -518,6 +659,454 @@ export function SongsProvider({ children }) {
   }, [isPlaying])
 
   /* =========================
+    AUDIO DEBUG EVENTS
+  ========================= */
+
+  useEffect(() => {
+
+    const audio = audioRef.current
+
+    if (!audio) return
+
+    const getSession = () => {
+
+      const session =
+        playbackSessionRef.current
+
+      return session || null
+    }
+
+
+    const getDetails = () => {
+
+      const mediaError = audio.error
+
+      return {
+
+        readyState: audio.readyState,
+
+        networkState: audio.networkState,
+
+        paused: audio.paused,
+
+        ended: audio.ended,
+
+        currentTime:
+          Number.isFinite(audio.currentTime)
+            ? audio.currentTime
+            : null,
+
+        duration:
+          Number.isFinite(audio.duration)
+            ? audio.duration
+            : null,
+
+        errorCode:
+          mediaError?.code ?? null,
+
+        errorMessage:
+          mediaError?.message ?? null
+      }
+    }
+
+
+    const onLoadStart = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.LOADSTART,
+        getDetails()
+      )
+    }
+
+
+    const onLoadedMetadata = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.LOADEDMETADATA,
+        getDetails()
+      )
+    }
+
+
+    const onLoadedData = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.LOADEDDATA,
+        getDetails()
+      )
+    }
+
+
+    const onDurationChange = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.DURATIONCHANGE,
+        getDetails()
+      )
+    }
+
+
+    const onCanPlay = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.CANPLAY,
+        getDetails()
+      )
+    }
+
+
+    const onCanPlayThrough = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.CANPLAYTHROUGH,
+        getDetails()
+      )
+    }
+
+
+    const onPlay = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.PLAY_EVENT,
+        getDetails()
+      )
+    }
+
+
+    const onPlaying = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.PLAYING_EVENT,
+        getDetails()
+      )
+    }
+
+
+    const onPause = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.PAUSE,
+        getDetails()
+      )
+    }
+
+
+    const onWaiting = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.WAITING,
+        getDetails()
+      )
+    }
+
+
+    const onStalled = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.STALLED,
+        getDetails()
+      )
+    }
+
+
+    const onSuspend = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.SUSPEND,
+        getDetails()
+      )
+    }
+
+
+    const onSeeking = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.SEEKING,
+        getDetails()
+      )
+    }
+
+
+    const onSeeked = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.SEEKED,
+        getDetails()
+      )
+    }
+
+
+    const onAbort = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.ABORT,
+        getDetails()
+      )
+    }
+
+
+    const onEmptied = () => {
+
+      const session = getSession()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.EMPTIED,
+        getDetails()
+      )
+    }
+
+
+    const onError = () => {
+
+      const session = getSession()
+
+      const details = getDetails()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.PLAYBACK.ERROR_EVENT,
+        details
+      )
+
+      debugError(
+        "PLAYBACK",
+        DEBUG_ERROR.PLAYBACK.AUDIO,
+        audio.error
+          ? {
+              message:
+                audio.error.message ||
+                `MediaError code ${audio.error.code}`
+            }
+          : new Error("audio error event"),
+        currentIdRef.current
+      )
+    }
+
+
+    audio.addEventListener(
+      "loadstart",
+      onLoadStart
+    )
+
+    audio.addEventListener(
+      "loadedmetadata",
+      onLoadedMetadata
+    )
+
+    audio.addEventListener(
+      "loadeddata",
+      onLoadedData
+    )
+
+    audio.addEventListener(
+      "durationchange",
+      onDurationChange
+    )
+
+    audio.addEventListener(
+      "canplay",
+      onCanPlay
+    )
+
+    audio.addEventListener(
+      "canplaythrough",
+      onCanPlayThrough
+    )
+
+    audio.addEventListener(
+      "play",
+      onPlay
+    )
+
+    audio.addEventListener(
+      "playing",
+      onPlaying
+    )
+
+    audio.addEventListener(
+      "pause",
+      onPause
+    )
+
+    audio.addEventListener(
+      "waiting",
+      onWaiting
+    )
+
+    audio.addEventListener(
+      "stalled",
+      onStalled
+    )
+
+    audio.addEventListener(
+      "suspend",
+      onSuspend
+    )
+
+    audio.addEventListener(
+      "seeking",
+      onSeeking
+    )
+
+    audio.addEventListener(
+      "seeked",
+      onSeeked
+    )
+
+    audio.addEventListener(
+      "abort",
+      onAbort
+    )
+
+    audio.addEventListener(
+      "emptied",
+      onEmptied
+    )
+
+    audio.addEventListener(
+      "error",
+      onError
+    )
+
+
+    return () => {
+
+      audio.removeEventListener(
+        "loadstart",
+        onLoadStart
+      )
+
+      audio.removeEventListener(
+        "loadedmetadata",
+        onLoadedMetadata
+      )
+
+      audio.removeEventListener(
+        "loadeddata",
+        onLoadedData
+      )
+
+      audio.removeEventListener(
+        "durationchange",
+        onDurationChange
+      )
+
+      audio.removeEventListener(
+        "canplay",
+        onCanPlay
+      )
+
+      audio.removeEventListener(
+        "canplaythrough",
+        onCanPlayThrough
+      )
+
+      audio.removeEventListener(
+        "play",
+        onPlay
+      )
+
+      audio.removeEventListener(
+        "playing",
+        onPlaying
+      )
+
+      audio.removeEventListener(
+        "pause",
+        onPause
+      )
+
+      audio.removeEventListener(
+        "waiting",
+        onWaiting
+      )
+
+      audio.removeEventListener(
+        "stalled",
+        onStalled
+      )
+
+      audio.removeEventListener(
+        "suspend",
+        onSuspend
+      )
+
+      audio.removeEventListener(
+        "seeking",
+        onSeeking
+      )
+
+      audio.removeEventListener(
+        "seeked",
+        onSeeked
+      )
+
+      audio.removeEventListener(
+        "abort",
+        onAbort
+      )
+
+      audio.removeEventListener(
+        "emptied",
+        onEmptied
+      )
+
+      audio.removeEventListener(
+        "error",
+        onError
+      )
+
+    }
+
+  }, [])
+
+  /* =========================
      PROGRESS
   ========================= */
 
@@ -542,10 +1131,15 @@ export function SongsProvider({ children }) {
 
           countedRef.current = true
 
-          debugProgress(
-            playbackSessionRef.current,
-            DEBUG_PROGRESS.PLAYBACK.HALF
-          )
+          const session =
+            playbackSessionRef.current
+
+          if (session) {
+            debugProgress(
+              playbackSessionRef.current,
+              DEBUG_PROGRESS.PLAYBACK.HALF
+            )
+          } 
 
           authfetch(
             `/songs/${currentId}/play`,
@@ -594,11 +1188,14 @@ export function SongsProvider({ children }) {
     ignoreRepeatOne = false
   } = {}) => {
 
+    const generation = ++queueGenerationRef.current
+
     const session =
       debugStart(
         "QUEUE",
         currentIdRef.current
       )
+
 
     queueSessionRef.current = session
 
@@ -629,6 +1226,11 @@ export function SongsProvider({ children }) {
       )
 
       const data = await res.json()
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.QUEUE.GENERATE
+      )
 
       if (data.restart) {
 
@@ -664,11 +1266,6 @@ export function SongsProvider({ children }) {
       }
 
       applyQueue(data, "NEXT")
-
-      debugProgress(
-        session,
-        DEBUG_PROGRESS.QUEUE.APPLY
-      )
       
       if(!data.current){
 
@@ -688,6 +1285,11 @@ export function SongsProvider({ children }) {
 
         return
       }
+
+      debugProgress(
+        session,
+        DEBUG_PROGRESS.QUEUE.FIRST_PLAY
+      )
 
       replaceWithComplete(
         session,
@@ -885,12 +1487,22 @@ export function SongsProvider({ children }) {
 
       if (changingTrackRef.current) return
 
-      replaceWithComplete(
-        playbackSessionRef.current,
-        DEBUG_PROGRESS.PLAYBACK.COMPLETE
-      )
+      const session =
+        playbackSessionRef.current
+      
+      const endedSongId =
+        playbackSongIdRef.current
+
+      if (session) {
+
+        replaceWithComplete(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.COMPLETE
+        )
+      }
 
       playbackSessionRef.current = null
+      playbackSongIdRef.current = null
 
       changingTrackRef.current = true
 

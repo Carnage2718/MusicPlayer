@@ -12,31 +12,72 @@ const getKey = () =>
 export const DEBUG_PROGRESS = {
 
   PLAYBACK: {
-    LOADING: 101,
-    PLAY_START: 102,
-    HALF: 103,
-    COMPLETE: 104
+
+    CURRENT: 1,
+
+    META_CACHE_HIT: 2,
+    META_REQUEST: 3,
+    META_LOADED: 4,
+
+    STREAM_CACHE_HIT: 5,
+    STREAM_REQUEST: 6,
+    STREAM_RESPONSE: 7,
+    STREAM_LOADED: 8,
+
+    AUDIO_SRC_SET: 9,
+    AUDIO_LOAD: 10,
+
+    CANPLAY: 11,
+    CANPLAYTHROUGH: 12,
+
+    PLAY_REQUEST: 13,
+    PLAY_START: 14,
+    PLAYING: 15,
+
+    HALF: 16,
+
+    PAUSE: 17,
+    WAITING: 18,
+    STALLED: 19,
+    SUSPEND: 20,
+
+    SEEKING: 21,
+    SEEKED: 22,
+
+    ENDED: 23,
+
+    COMPLETE: 24
   },
 
+
   QUEUE: {
+
+    REQUEST: 101,
+    RESPONSE: 102,
+    CURRENT_RECEIVED: 103,
+    APPLY: 104,
+    COMPLETE: 105
+  },
+
+
+  PLAY_ACTION: {
+
     REQUEST: 201,
     RESPONSE: 202,
     APPLY: 203,
     COMPLETE: 204
   },
 
-  PLAY_ACTION: {
-    REQUEST: 301,
-    COMPLETE: 302
-  },
 
   SHUFFLE: {
-    REQUEST: 401,
-    COMPLETE: 402
+
+    REQUEST: 301,
+    RESPONSE: 302,
+    APPLY: 303,
+    COMPLETE: 304
   }
 
 }
-
 
 /* =========================
    ERROR CODE
@@ -55,7 +96,10 @@ export const DEBUG_ERROR = {
   QUEUE: {
     REQUEST: 2001,
     RESPONSE: 2002,
-    APPLY: 2003
+    GENERATE: 2003,
+    UPDATE: 2004,
+    FIRST_PLAY: 2005,
+    COMPLETE: 2006
   },
 
   PLAY_ACTION: {
@@ -75,24 +119,68 @@ export const DEBUG_ERROR = {
 
 export const DEBUG_TEXT = {
 
-  101: "loading",
-  102: "play start",
-  103: "50% history + play count",
-  104: "play complete",
+  /* PLAYBACK */
 
-  201: "queue request",
-  202: "queue response",
-  203: "queue apply",
-  204: "queue complete",
+  1: "current recognized",
 
-  301: "play action request",
-  302: "play action complete",
+  2: "meta cache hit",
+  3: "meta request",
+  4: "meta loaded",
 
-  401: "shuffle request",
-  402: "shuffle complete"
+  5: "stream cache hit",
+  6: "stream request",
+  7: "stream loaded",
+
+  8: "audio src set",
+  9: "audio load",
+
+  10: "canplay",
+  11: "canplaythrough",
+
+  12: "play request",
+  13: "play start",
+  14: "playing",
+
+  15: "50% history + play count",
+
+  16: "pause",
+  17: "waiting",
+  18: "stalled",
+  19: "suspend",
+
+  20: "seeking",
+  21: "seeked",
+
+  22: "ended",
+
+  23: "play complete",
+
+
+  /* QUEUE */
+
+  101: "next request",
+  102: "next response",
+  103: "next current received",
+  104: "queue apply",
+  105: "queue complete",
+
+
+  /* PLAY ACTION */
+
+  201: "play action request",
+  202: "play action response",
+  203: "play action apply",
+  204: "play action complete",
+
+
+  /* SHUFFLE */
+
+  301: "shuffle request",
+  302: "shuffle response",
+  303: "shuffle apply",
+  304: "shuffle complete"
 
 }
-
 
 /* =========================
    STORAGE
@@ -165,15 +253,22 @@ export const debugStart = (
 
 export const debugProgress = (
   session,
-  code
+  code,
+  details = null
 ) => {
 
   if (!session) return
 
-  session.logs.push({
+  const log = {
     code,
     time: now()
-  })
+  }
+
+  if (details) {
+    log.details = details
+  }
+
+  session.logs.push(log)
 
   saveActive(session)
 
