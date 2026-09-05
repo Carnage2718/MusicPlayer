@@ -63,7 +63,10 @@ export const DEBUG_PROGRESS = {
     ABORT: 31,
     EMPTIED: 32,
 
-    ERROR_EVENT: 33
+    ERROR_EVENT: 33,
+
+    PROGRESS: 34,
+    RATECHANGE: 35
   },
 
 
@@ -187,6 +190,9 @@ export const DEBUG_TEXT = {
   32: "audio emptied",
 
   33: "audio error event",
+
+  34: "audio progress",
+  35: "audio ratechange",
 
 
   /* QUEUE */
@@ -399,7 +405,8 @@ export const debugError = (
   type,
   code,
   error,
-  target = null
+  target = null,
+  details = null
 ) => {
 
   const logs = read()
@@ -421,6 +428,8 @@ export const debugError = (
     name:
       error?.name ||
       null,
+    
+    details: details || null,
 
     time: now()
 

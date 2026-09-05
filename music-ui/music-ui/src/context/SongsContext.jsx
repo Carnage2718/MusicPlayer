@@ -537,15 +537,42 @@ export function SongsProvider({ children }) {
 
           } catch (e) {
 
+            const details = {
+
+              readyState: audio.readyState,
+
+              networkState: audio.networkState,
+
+              paused: audio.paused,
+
+              ended: audio.ended,
+
+              currentTime:
+                Number.isFinite(audio.currentTime)
+                  ? Number(audio.currentTime.toFixed(2))
+                  : null,
+
+              duration:
+                Number.isFinite(audio.duration)
+                  ? Number(audio.duration.toFixed(2))
+                  : null,
+
+              mediaErrorCode:
+                audio.error?.code ?? null,
+
+              mediaErrorMessage:
+                audio.error?.message ?? null
+            }
+
             debugError(
               "PLAYBACK",
               DEBUG_ERROR.PLAYBACK.PLAY,
               e,
-              id
+              id,
+              details
             )
 
             setIsPlaying(false)
-
           }
         }
       } catch (e) {
@@ -643,17 +670,64 @@ export function SongsProvider({ children }) {
   useEffect(() => {
 
     const audio = audioRef.current
+
     if (!audio) return
 
     if (isPlaying) {
 
       audio.play()
         .catch(e => {
+
+          const session =
+            playbackSessionRef.current
+
+          const details = {
+
+            readyState:
+              audio.readyState,
+
+            networkState:
+              audio.networkState,
+
+            paused:
+              audio.paused,
+
+            ended:
+              audio.ended,
+
+            currentTime:
+              Number.isFinite(audio.currentTime)
+                ? Number(audio.currentTime.toFixed(2))
+                : null,
+
+            duration:
+              Number.isFinite(audio.duration)
+                ? Number(audio.duration.toFixed(2))
+                : null,
+
+            mediaErrorCode:
+              audio.error?.code ?? null,
+
+            mediaErrorMessage:
+              audio.error?.message ?? null
+          }
+
+          debugError(
+            "PLAYBACK",
+            DEBUG_ERROR.PLAYBACK.PLAY,
+            e,
+            currentIdRef.current,
+            details
+          )
+
           setIsPlaying(false)
+
         })
 
     } else {
+
       audio.pause()
+
     }
 
   }, [isPlaying])
@@ -713,7 +787,22 @@ export function SongsProvider({ children }) {
         src:
           audio.src
             ? audio.src.split("?")[0]
-            : null
+            : null,
+
+        crossOrigin:
+          audio.crossOrigin || null,
+
+        volume:
+          audio.volume,
+
+        muted:
+          audio.muted,
+
+        playbackRate:
+          audio.playbackRate,
+
+        defaultPlaybackRate:
+          audio.defaultPlaybackRate
       }
     }
 
@@ -921,30 +1010,36 @@ export function SongsProvider({ children }) {
         details
       )
 
-      const mediaError = audio.error
+      let message =
+        details.errorMessage ||
+        "Unknown media error"
 
-      const error = new Error(
-        mediaError
-          ? `MediaError code ${mediaError.code}`
-          : "audio error event"
-      )
+      if (details.errorCode === 1) {
+        message = "MEDIA_ERR_ABORTED"
+      }
 
-      error.name =
-        mediaError?.code === 1
-          ? "MEDIA_ERR_ABORTED"
-          : mediaError?.code === 2
-          ? "MEDIA_ERR_NETWORK"
-          : mediaError?.code === 3
-          ? "MEDIA_ERR_DECODE"
-          : mediaError?.code === 4
-          ? "MEDIA_ERR_SRC_NOT_SUPPORTED"
-          : "MEDIA_ERR_UNKNOWN"
+      if (details.errorCode === 2) {
+        message = "MEDIA_ERR_NETWORK"
+      }
+
+      if (details.errorCode === 3) {
+        message = "MEDIA_ERR_DECODE"
+      }
+
+      if (details.errorCode === 4) {
+        message = "MEDIA_ERR_SRC_NOT_SUPPORTED"
+      }
+
+      const error = new Error(message)
+
+      error.name = "MediaError"
 
       debugError(
         "PLAYBACK",
         DEBUG_ERROR.PLAYBACK.AUDIO,
         error,
-        currentIdRef.current
+        currentIdRef.current,
+        details
       )
     }
 

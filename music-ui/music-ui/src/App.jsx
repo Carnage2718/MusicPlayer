@@ -3,6 +3,7 @@ import "./App.css"
 
 import { SongsProvider, useSongs } from "./context/SongsContext"
 import { MenuProvider } from "./context/MenuContext"
+import { MusicModeProvider } from "./context/MusicModeContext.jsx"
 
 import HomeScreen from "./screens/HomeScreen"
 import SearchScreen from "./screens/SearchScreen"
@@ -25,6 +26,7 @@ import DebugLogScreen from "./screens/DebugLogScreen"
 import MiniPlayer from "./components/MiniPlayer"
 import BottomNav from "./components/BottomNav"
 import FullPlayer from "./components/FullPlayer"
+import { Music } from "lucide-react"
 
 function AppContent() {
 
@@ -328,7 +330,9 @@ export default function App() {
 
   return (
     <SongsProvider>
-      <AppContent/>
+      <MusicModeProvider>
+        <AppContent/>
+      </MusicModeProvider>
     </SongsProvider>
   )
 }
