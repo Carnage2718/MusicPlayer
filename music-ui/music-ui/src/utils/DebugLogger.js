@@ -66,7 +66,17 @@ export const DEBUG_PROGRESS = {
     ERROR_EVENT: 33,
 
     PROGRESS: 34,
-    RATECHANGE: 35
+    RATECHANGE: 35,
+
+    PLAY_PAUSE_REQUEST: 36,
+    PLAY_PAUSE_EVENT: 37,
+
+    PLAY_ERROR: 38,
+    PLAY_STATE_CHANGE: 39,
+
+    SOURCE_CHECK: 40,
+    PLAY_PROMISE_RESOLVED: 41,
+    PLAY_PROMISE_REJECTED: 42
   },
 
 
@@ -128,6 +138,10 @@ export const DEBUG_ERROR = {
 
   SHUFFLE: {
     REQUEST: 4001
+  },
+
+  PLAY_FROM: {
+    REQUEST: 5001
   }
 
 }
@@ -194,6 +208,14 @@ export const DEBUG_TEXT = {
   34: "audio progress",
   35: "audio ratechange",
 
+  36: "audio pause request",
+  37: "audio pause event",
+  38: "play error",
+  39: "isPlaying state change",
+
+  40: "source check",
+  41: "play promise resolved",
+  42: "play promise rejected",
 
   /* QUEUE */
 
@@ -217,7 +239,9 @@ export const DEBUG_TEXT = {
   301: "shuffle request",
   302: "shuffle response",
   303: "shuffle apply",
-  304: "shuffle complete"
+  304: "shuffle complete",
+
+  5001: "play from request"
 
 }
 
@@ -260,22 +284,62 @@ const now = () =>
    SESSION
 ========================= */
 
+const getSequenceKey = () =>
+  `debugSequence_${getUserId()}`
+
 let sequence = 0
 
-export const debugStart = (
-  type,
-  target = null
-) => {
+const getNextSequence = () => {
+
+  try {
+
+    const saved =
+    Number(
+      localStorage.getItem(
+        getSequenceKey()
+      ) || "0"
+    )
+
+    sequence = 
+      Number.isFinite(saved)
+        ? saved
+        : 0
+
+  } catch {
+    sequence = 0
+  }
 
   sequence += 1
 
+  localStorage.setItem(
+    getSequenceKey(),
+    String(sequence)
+  )
+
+  return sequence
+
+}
+
+
+
+
+export const debugStart = (
+  type,
+  target = null,
+  details = null
+) => {
+
+  const id = getNextSequence()
+
   return {
 
-    id: sequence,
+    id,
 
     type,
 
     target,
+
+    details,
 
     logs: [],
 
@@ -334,6 +398,10 @@ const saveActive = session => {
 
     logs: session.logs,
 
+    details: session.details || null,
+
+    startedAt: session.startedAt,
+
     updatedAt: now()
 
   }
@@ -388,6 +456,12 @@ export const replaceWithComplete = (
 
     complete: true,
 
+    startedAt: session.startedAt,
+
+    details: session.details || null,
+
+    logs: session.logs,
+
     time: now()
 
   })
@@ -406,12 +480,19 @@ export const debugError = (
   code,
   error,
   target = null,
-  details = null
+  details = null,
+  session = null
 ) => {
 
   const logs = read()
 
   logs.push({
+
+    id:
+      session?.id ?? null,
+
+    sessionId:
+      session?.id ?? null,
 
     type,
 
@@ -428,15 +509,18 @@ export const debugError = (
     name:
       error?.name ||
       null,
-    
-    details: details || null,
+
+    details:
+      details || null,
+
+    sessionDetails:
+      session?.details || null,
 
     time: now()
 
   })
 
   write(logs)
-
 }
 
 

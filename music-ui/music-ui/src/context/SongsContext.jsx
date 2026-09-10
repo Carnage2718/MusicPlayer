@@ -278,6 +278,60 @@ export function SongsProvider({ children }) {
     }
   }
 
+  
+  /* =========================
+    PAUSE DEBUG
+  ========================= */
+
+  const pauseAudio = (reason) => {
+
+    const audio = audioRef.current
+
+    if (!audio) return
+
+    const session =
+      playbackSessionRef.current
+
+    debugProgress(
+      session,
+      DEBUG_PROGRESS.PLAYBACK.PLAY_PAUSE_REQUEST,
+      {
+        reason,
+
+        currentId:
+          currentIdRef.current,
+
+        generation:
+          playbackGenerationRef.current,
+
+        paused:
+          audio.paused,
+
+        ended:
+          audio.ended,
+
+        readyState:
+          audio.readyState,
+
+        networkState:
+          audio.networkState,
+
+        currentTime:
+          Number.isFinite(audio.currentTime)
+            ? Number(audio.currentTime.toFixed(2))
+            : null,
+
+        duration:
+          Number.isFinite(audio.duration)
+            ? Number(audio.duration.toFixed(2))
+            : null
+      }
+    )
+
+    audio.pause()
+  }
+
+
   /* =========================
      STREAM
   ========================= */
@@ -398,7 +452,11 @@ export function SongsProvider({ children }) {
     const session = 
       debugStart(
         "PLAY",
-        id
+        id,
+        {
+          generation,
+          loadId: myLoadId
+        }
       )
 
     playbackSessionRef.current =session
@@ -451,23 +509,144 @@ export function SongsProvider({ children }) {
 
         const audio = audioRef.current
 
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.SOURCE_CHECK,
+          {
+            generation,
+
+            loadId: myLoadId,
+
+            currentId: id,
+
+            streamExists:
+              !!stream,
+
+            streamType:
+              typeof stream,
+
+            streamLength:
+              typeof stream === "string"
+                ? stream.length
+                : null,
+
+            previousSrc:
+              audio.src
+                ? audio.src.split("?")[0]
+                : null,
+
+            currentSrc:
+              audio.currentSrc
+                ? audio.currentSrc.split("?")[0]
+                : null,
+
+            readyState:
+              audio.readyState,
+
+            networkState:
+              audio.networkState,
+
+            paused:
+              audio.paused,
+
+            ended:
+              audio.ended,
+
+            mediaErrorCode:
+              audio.error?.code ?? null,
+
+            mediaErrorMessage:
+              audio.error?.message ?? null
+          }
+        )
+
         if (audio.src !== stream) {
 
 
-          audio.pause()
+          pauseAudio("before src change")
           audio.currentTime = 0
           audio.src = stream
 
           debugProgress(
             session,
-            DEBUG_PROGRESS.PLAYBACK.AUDIO_SRC_SET
+            DEBUG_PROGRESS.PLAYBACK.AUDIO_SRC_SET,
+            {
+              generation,
+
+              loadId: myLoadId,
+
+              currentId: id,
+
+              src:
+                audio.src
+                  ? audio.src.split("?")[0]
+                  : null,
+
+              currentSrc:
+                audio.currentSrc
+                  ? audio.currentSrc.split("?")[0]
+                  : null,
+
+              readyState:
+                audio.readyState,
+
+              networkState:
+                audio.networkState,
+
+              paused:
+                audio.paused,
+
+              ended:
+                audio.ended,
+
+              mediaErrorCode:
+                audio.error?.code ?? null,
+
+              mediaErrorMessage:
+                audio.error?.message ?? null
+            }
           )
 
           audio.load()
 
           debugProgress(
             session,
-            DEBUG_PROGRESS.PLAYBACK.AUDIO_LOAD
+            DEBUG_PROGRESS.PLAYBACK.AUDIO_LOAD,
+            {
+              generation,
+
+              loadId: myLoadId,
+
+              currentId: id,
+
+              src:
+                audio.src
+                  ? audio.src.split("?")[0]
+                  : null,
+
+              currentSrc:
+                audio.currentSrc
+                  ? audio.currentSrc.split("?")[0]
+                  : null,
+
+              readyState:
+                audio.readyState,
+
+              networkState:
+                audio.networkState,
+
+              paused:
+                audio.paused,
+
+              ended:
+                audio.ended,
+
+              mediaErrorCode:
+                audio.error?.code ?? null,
+
+              mediaErrorMessage:
+                audio.error?.message ?? null
+            }
           )
 
           await Promise.race([
@@ -516,63 +695,189 @@ export function SongsProvider({ children }) {
 
         if (userInteracted.current) {
 
+          const playDetails = {
+
+            reason: "currentId effect",
+
+            generation,
+
+            currentId: id,
+
+            paused:
+              audio.paused,
+
+            ended:
+              audio.ended,
+
+            readyState:
+              audio.readyState,
+
+            networkState:
+              audio.networkState,
+
+            currentTime:
+              Number.isFinite(audio.currentTime)
+                ? Number(
+                    audio.currentTime.toFixed(2)
+                  )
+                : null,
+
+            duration:
+              Number.isFinite(audio.duration)
+                ? Number(
+                    audio.duration.toFixed(2)
+                  )
+                : null,
+
+            mediaErrorCode:
+              audio.error?.code ?? null,
+
+            mediaErrorMessage:
+              audio.error?.message ?? null
+          }
+
+          debugProgress(
+            session,
+            DEBUG_PROGRESS.PLAYBACK.PLAY_REQUEST,
+            playDetails
+          )
+
           try {
-            
-            const session =
-              playbackSessionRef.current
 
             await audio.play()
 
-            if (
-              session &&
-              playbackSessionRef.current ===session
-            ) {
-              debugProgress(
-                playbackSessionRef.current,
-                DEBUG_PROGRESS.PLAYBACK.PLAY_START
-              )
-            }
+            /*
+            * play() Promise 成功
+            */
+
+            debugProgress(
+              session,
+              DEBUG_PROGRESS.PLAYBACK.PLAY_PROMISE_RESOLVED,
+              {
+                ...playDetails,
+
+                paused:
+                  audio.paused,
+
+                readyState:
+                  audio.readyState,
+
+                networkState:
+                  audio.networkState,
+
+                currentTime:
+                  Number.isFinite(audio.currentTime)
+                    ? Number(
+                        audio.currentTime.toFixed(2)
+                      )
+                    : null
+              }
+            )
+
+            /*
+            * 実際に play() が成功した
+            */
+
+            debugProgress(
+              session,
+              DEBUG_PROGRESS.PLAYBACK.PLAY_START
+            )
 
             setIsPlaying(true)
 
           } catch (e) {
 
-            const details = {
+            /*
+            * play() Promise 失敗
+            */
 
-              readyState: audio.readyState,
+            debugProgress(
+              session,
+              DEBUG_PROGRESS.PLAYBACK.PLAY_PROMISE_REJECTED,
+              {
+                ...playDetails,
 
-              networkState: audio.networkState,
+                errorName:
+                  e?.name || null,
 
-              paused: audio.paused,
+                errorMessage:
+                  e?.message || String(e),
 
-              ended: audio.ended,
+                paused:
+                  audio.paused,
 
-              currentTime:
-                Number.isFinite(audio.currentTime)
-                  ? Number(audio.currentTime.toFixed(2))
-                  : null,
+                ended:
+                  audio.ended,
 
-              duration:
-                Number.isFinite(audio.duration)
-                  ? Number(audio.duration.toFixed(2))
-                  : null,
+                readyState:
+                  audio.readyState,
 
-              mediaErrorCode:
-                audio.error?.code ?? null,
+                networkState:
+                  audio.networkState,
 
-              mediaErrorMessage:
-                audio.error?.message ?? null
-            }
+                currentTime:
+                  Number.isFinite(audio.currentTime)
+                    ? Number(
+                        audio.currentTime.toFixed(2)
+                      )
+                    : null,
+
+                duration:
+                  Number.isFinite(audio.duration)
+                    ? Number(
+                        audio.duration.toFixed(2)
+                      )
+                    : null,
+
+                mediaErrorCode:
+                  audio.error?.code ?? null,
+
+                mediaErrorMessage:
+                  audio.error?.message ?? null
+              }
+            )
+
+            /*
+            * PLAY ERROR
+            */
 
             debugError(
               "PLAYBACK",
               DEBUG_ERROR.PLAYBACK.PLAY,
               e,
               id,
-              details
+              {
+                ...playDetails,
+
+                errorName:
+                  e?.name || null,
+
+                errorMessage:
+                  e?.message || String(e),
+
+                paused:
+                  audio.paused,
+
+                ended:
+                  audio.ended,
+
+                readyState:
+                  audio.readyState,
+
+                networkState:
+                  audio.networkState,
+
+                mediaErrorCode:
+                  audio.error?.code ?? null,
+
+                mediaErrorMessage:
+                  audio.error?.message ?? null
+              },
+              session
             )
 
             setIsPlaying(false)
+
           }
         }
       } catch (e) {
@@ -581,8 +886,24 @@ export function SongsProvider({ children }) {
           "PLAYBACK",
           DEBUG_ERROR.PLAYBACK.META,
           e,
-          id
+          id,
+          {
+            generation,
+
+            loadId: myLoadId,
+
+            errorName:
+              e?.name || null,
+
+            errorMessage:
+              e?.message || String(e),
+
+            currentId:
+              currentIdRef.current
+          },
+          session
         )
+
         setIsPlaying(false)
       }
     }
@@ -717,7 +1038,8 @@ export function SongsProvider({ children }) {
             DEBUG_ERROR.PLAYBACK.PLAY,
             e,
             currentIdRef.current,
-            details
+            details,
+            session
           )
 
           setIsPlaying(false)
@@ -726,7 +1048,7 @@ export function SongsProvider({ children }) {
 
     } else {
 
-      audio.pause()
+      pauseAudio("isPlaying=false effect")
 
     }
 
@@ -755,31 +1077,110 @@ export function SongsProvider({ children }) {
 
       const mediaError = audio.error
 
+      const getRanges = range => {
+
+        try {
+
+          const result = []
+
+          for (
+            let i = 0;
+            i < range.length;
+            i++
+          ) {
+
+            result.push({
+
+              start:
+                Number(
+                  range.start(i).toFixed(2)
+                ),
+
+              end:
+                Number(
+                  range.end(i).toFixed(2)
+                )
+
+            })
+
+          }
+
+          return result
+
+        } catch {
+
+          return []
+
+        }
+
+      }
+
+
       return {
 
-        readyState: audio.readyState,
+        /* =====================
+          MEDIA STATE
+        ===================== */
 
-        networkState: audio.networkState,
+        readyState:
+          audio.readyState,
 
-        paused: audio.paused,
+        networkState:
+          audio.networkState,
 
-        ended: audio.ended,
+        paused:
+          audio.paused,
+
+        ended:
+          audio.ended,
+
+        seeking:
+          audio.seeking,
+
+        autoplaying:
+          audio.autoplay,
+
+        /* =====================
+          POSITION
+        ===================== */
 
         currentTime:
           Number.isFinite(audio.currentTime)
-            ? Number(audio.currentTime.toFixed(2))
+            ? Number(
+                audio.currentTime.toFixed(2)
+              )
             : null,
 
         duration:
           Number.isFinite(audio.duration)
-            ? Number(audio.duration.toFixed(2))
+            ? Number(
+                audio.duration.toFixed(2)
+              )
             : null,
+
+        /* =====================
+          BUFFER
+        ===================== */
+
+        buffered:
+          getRanges(audio.buffered),
+
+        seekable:
+          getRanges(audio.seekable),
+
+        /* =====================
+          ERROR
+        ===================== */
 
         errorCode:
           mediaError?.code ?? null,
 
         errorMessage:
           mediaError?.message ?? null,
+
+        /* =====================
+          SOURCE
+        ===================== */
 
         srcExists:
           !!audio.src,
@@ -788,6 +1189,15 @@ export function SongsProvider({ children }) {
           audio.src
             ? audio.src.split("?")[0]
             : null,
+
+        currentSrc:
+          audio.currentSrc
+            ? audio.currentSrc.split("?")[0]
+            : null,
+
+        /* =====================
+          AUDIO CONFIG
+        ===================== */
 
         crossOrigin:
           audio.crossOrigin || null,
@@ -1039,7 +1449,8 @@ export function SongsProvider({ children }) {
         DEBUG_ERROR.PLAYBACK.AUDIO,
         error,
         currentIdRef.current,
-        details
+        details,
+        session
       )
     }
 
@@ -1262,12 +1673,41 @@ export function SongsProvider({ children }) {
           )
           .then(loadHistory)
           .catch(e => {
+
+            const session =
+              playbackSessionRef.current
+
             debugError(
               "PLAYBACK",
               DEBUG_ERROR.PLAYBACK.HALF,
               e,
-              currentId
+              currentId,
+              {
+                currentId,
+
+                currentTime:
+                  Number.isFinite(audio.currentTime)
+                    ? Number(
+                        audio.currentTime.toFixed(2)
+                      )
+                    : null,
+
+                duration:
+                  Number.isFinite(audio.duration)
+                    ? Number(
+                        audio.duration.toFixed(2)
+                      )
+                    : null,
+
+                readyState:
+                  audio.readyState,
+
+                networkState:
+                  audio.networkState
+              },
+              session
             )
+
           })
 
         }
@@ -1364,7 +1804,43 @@ export function SongsProvider({ children }) {
             "PLAYBACK",
             DEBUG_ERROR.PLAYBACK.PLAY,
             e,
-            currentIdRef.current
+            currentIdRef.current,
+            {
+              reason: "nextSong restart",
+
+              readyState:
+                audio.readyState,
+
+              networkState:
+                audio.networkState,
+
+              paused:
+                audio.paused,
+
+              ended:
+                audio.ended,
+
+              currentTime:
+                Number.isFinite(audio.currentTime)
+                  ? Number(
+                      audio.currentTime.toFixed(2)
+                    )
+                  : null,
+
+              duration:
+                Number.isFinite(audio.duration)
+                  ? Number(
+                      audio.duration.toFixed(2)
+                    )
+                  : null,
+
+              mediaErrorCode:
+                audio.error?.code ?? null,
+
+              mediaErrorMessage:
+                audio.error?.message ?? null
+            },
+            session
           )
 
           setIsPlaying(false)
@@ -1386,7 +1862,7 @@ export function SongsProvider({ children }) {
 
         const audio = audioRef.current
         
-        audio.pause()
+        pauseAudio("no current after next")
         audio.currentTime = 0
 
         setIsPlaying(false)
@@ -1419,11 +1895,20 @@ export function SongsProvider({ children }) {
         "QUEUE",
         DEBUG_ERROR.QUEUE.REQUEST,
         e,
-        currentIdRef.current
+        currentIdRef.current,
+        {
+          generation,
+
+          errorName:
+            e?.name || null,
+
+          errorMessage:
+            e?.message || String(e)
+        },
+        session
       )
 
       queueSessionRef.current = null
-
     }
       
 
@@ -1452,7 +1937,9 @@ export function SongsProvider({ children }) {
         "QUEUE",
         DEBUG_ERROR.QUEUE.REQUEST,
         e,
-        "previous"
+        "previous",
+        null,
+        null
       )
     }
   }
@@ -1520,7 +2007,15 @@ export function SongsProvider({ children }) {
         "PLAY_ACTION",
         DEBUG_ERROR.PLAY_ACTION.REQUEST,
         e,
-        id
+        id,
+        {
+          errorName:
+            e?.name || null,
+
+          errorMessage:
+            e?.message || String(e)
+        },
+        session
       )
     }
   }
@@ -1567,7 +2062,15 @@ export function SongsProvider({ children }) {
         "SHUFFLE",
         DEBUG_ERROR.SHUFFLE.REQUEST,
         e,
-        "queue"
+        "queue",
+        {
+          errorName:
+            e?.name || null,
+
+          errorMessage:
+            e?.message || String(e)
+        },
+        session
       )
     }
   }
@@ -1663,37 +2166,80 @@ export function SongsProvider({ children }) {
   const playFrom = async (endpoint) => {
 
     if (isStartingRef.current) return
+
     isStartingRef.current = true
+
+    const session =
+      debugStart(
+        "PLAY_FROM",
+        endpoint
+      )
+
+    debugProgress(
+      session,
+      DEBUG_PROGRESS.PLAY_ACTION.REQUEST,
+      {
+        endpoint
+      }
+    )
 
     try {
 
       userInteracted.current = true
 
       const res = await authfetch(
-        endpoint.replace(API_BASE,""),
-        { 
-          method: "POST" 
+        endpoint.replace(API_BASE, ""),
+        {
+          method: "POST"
         }
       )
+
+      if (!res.ok) {
+        throw new Error(
+          `HTTP ${res.status}`
+        )
+      }
+
       const data = await res.json()
 
       const firstId = data.current
-      if (!firstId) return
+
+      if (!firstId) {
+        throw new Error(
+          "playFrom response has no current"
+        )
+      }
 
       applyQueue(data, "PLAY_FROM")
+
       setProgress(0)
+
+      replaceWithComplete(
+        session,
+        DEBUG_PROGRESS.PLAY_ACTION.COMPLETE
+      )
 
     } catch (e) {
 
       debugError(
-        "QUEUE",
+        "PLAY_FROM",
         DEBUG_ERROR.PLAY_FROM.REQUEST,
         e,
-        endpoint
+        endpoint,
+        {
+          errorName:
+            e?.name || null,
+
+          errorMessage:
+            e?.message || String(e)
+        },
+        session
       )
 
     } finally {
+
       isStartingRef.current = false
+
     }
   }
 
@@ -1760,13 +2306,88 @@ export function SongsProvider({ children }) {
   useEffect(() => {
     if (!("mediaSession" in navigator)) return
 
-    navigator.mediaSession.setActionHandler("play", () => {
-      audioRef.current.play()
-      setIsPlaying(true)
-    })
+    navigator.mediaSession.setActionHandler(
+      "play",
+      async () => {
+
+        const audio = audioRef.current
+
+        if (!audio) return
+
+        const session =
+          playbackSessionRef.current
+
+        debugProgress(
+          session,
+          DEBUG_PROGRESS.PLAYBACK.PLAY_REQUEST,
+          {
+            reason: "mediaSession play",
+
+            currentId:
+              currentIdRef.current,
+
+            readyState:
+              audio.readyState,
+
+            networkState:
+              audio.networkState,
+
+            paused:
+              audio.paused,
+
+            ended:
+              audio.ended
+          }
+        )
+
+        try {
+
+          await audio.play()
+
+          debugProgress(
+            session,
+            DEBUG_PROGRESS.PLAYBACK.PLAY_PROMISE_RESOLVED,
+            {
+              reason: "mediaSession play"
+            }
+          )
+
+          setIsPlaying(true)
+
+        } catch (e) {
+
+          debugProgress(
+            session,
+            DEBUG_PROGRESS.PLAYBACK.PLAY_PROMISE_REJECTED,
+            {
+              reason: "mediaSession play",
+
+              errorName:
+                e?.name || null,
+
+              errorMessage:
+                e?.message || String(e)
+            }
+          )
+
+          debugError(
+            "PLAYBACK",
+            DEBUG_ERROR.PLAYBACK.PLAY,
+            e,
+            currentIdRef.current,
+            null,
+            session
+          )
+
+          setIsPlaying(false)
+
+        }
+
+      }
+    )
 
     navigator.mediaSession.setActionHandler("pause", () => {
-      audioRef.current.pause()
+      pauseAudio("mediaSession pause")
       setIsPlaying(false)
     })
 
