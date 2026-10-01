@@ -59,7 +59,6 @@ export function SongsProvider({ children }) {
   const audioRef = useRef(null)
   const [currentId, setCurrentId] = useState(null)
   const currentIdRef = useRef(null)
-  const countedRef = useRef(false)
   const historyRecordedRef = useRef(null)
   const [queueIds, setQueueIds] = useState([])
   const [current, setCurrent] = useState(null)
@@ -205,6 +204,22 @@ export function SongsProvider({ children }) {
 
     const previousCurrent = currentIdRef.current
     const nextCurrent = data.current
+
+    if (
+      queueSessionRef.current &&
+      nextCurrent !== undefined &&
+      nextCurrent !== previousCurrent &&
+      source !== "NEXT"
+    ) {
+
+      replaceWithComplete(
+        queueSessionRef.current,
+        DEBUG_PROGRESS.QUEUE.COMPLETE
+      )
+
+      queueSessionRef.current = null
+
+    }
 
     if (
       queueSessionRef.current &&
@@ -500,14 +515,17 @@ export function SongsProvider({ children }) {
     if (
       previousSession &&
       previousSongId &&
-      previousSongId !== id &&
-      previousSession.hasPlayed
+      previousSongId !== id
     ) {
 
-      recordHistory(
-        previousSongId,
-        previousSession
-      )
+      if (previousSession.hasPlayed) {
+
+        recordHistory(
+          previousSongId,
+          previousSession
+        )
+
+      }
 
       replaceWithComplete(
         previousSession,
@@ -971,10 +989,6 @@ export function SongsProvider({ children }) {
     load()
     return () => { cancelled = true }
 
-  }, [currentId])
-
-  useEffect(() => {
-    countedRef.current = false
   }, [currentId])
 
   /* =========================
@@ -1795,6 +1809,16 @@ export function SongsProvider({ children }) {
     ignoreRepeatOne = false
   } = {}) => {
 
+    if (queueSessionRef.current) {
+
+      replaceWithComplete(
+        queueSessionRef.current,
+        DEBUG_PROGRESS.QUEUE.COMPLETE
+      )
+
+      queueSessionRef.current = null
+    }
+
     const generation = ++queueGenerationRef.current
 
     const session =
@@ -1802,7 +1826,6 @@ export function SongsProvider({ children }) {
         "QUEUE",
         currentIdRef.current
       )
-
 
     queueSessionRef.current = session
 
@@ -1916,6 +1939,11 @@ export function SongsProvider({ children }) {
             audio
           )
 
+          replaceWithComplete(
+            session,
+            DEBUG_PROGRESS.QUEUE.COMPLETE
+          )
+
           queueSessionRef.current = null
 
           setIsPlaying(false)
@@ -1968,9 +1996,13 @@ export function SongsProvider({ children }) {
         session
       )
 
+      replaceWithComplete(
+        session,
+        DEBUG_PROGRESS.QUEUE.COMPLETE
+      )
+
       queueSessionRef.current = null
-    }
-      
+    }     
 
   }
 
@@ -2163,11 +2195,9 @@ export function SongsProvider({ children }) {
 
     const ended = async () => {
 
-      if (changingTrackRef.current) return
-
       const session =
         playbackSessionRef.current
-      
+
       const endedSongId =
         playbackSongIdRef.current
 
@@ -2190,6 +2220,8 @@ export function SongsProvider({ children }) {
           DEBUG_PROGRESS.PLAYBACK.COMPLETE
         )
       }
+
+      if (changingTrackRef.current) return
 
       playbackSessionRef.current = null
       playbackSongIdRef.current = null
