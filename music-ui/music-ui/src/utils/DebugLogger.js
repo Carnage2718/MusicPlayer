@@ -76,17 +76,32 @@ export const DEBUG_PROGRESS = {
 
     SOURCE_CHECK: 40,
     PLAY_PROMISE_RESOLVED: 41,
-    PLAY_PROMISE_REJECTED: 42
+    PLAY_PROMISE_REJECTED: 42,
+
+    /* =========================
+      DIAGNOSTIC
+    ========================= */
+
+    AUDIO_SNAPSHOT: 43,
+    SOURCE_CHANGED: 44,
+    NETWORK_STATE_CHANGE: 45,
+    READY_STATE_CHANGE: 46,
+    MEDIA_ERROR: 47,
+    PLAY_REQUEST_START: 48,
+    PLAY_REQUEST_END: 49,
+    PAUSE_REASON: 50
   },
 
 
   QUEUE: {
-
+    
     REQUEST: 101,
     RESPONSE: 102,
-    CURRENT_RECEIVED: 103,
-    APPLY: 104,
-    COMPLETE: 105
+    GENERATE: 103,
+    CURRENT_RECEIVED: 104,
+    UPDATE: 105,
+    FIRST_PLAY: 106,
+    COMPLETE: 107
   },
 
 
@@ -217,13 +232,24 @@ export const DEBUG_TEXT = {
   41: "play promise resolved",
   42: "play promise rejected",
 
+  43: "audio snapshot",
+  44: "source changed",
+  45: "network state change",
+  46: "ready state change",
+  47: "media error",
+  48: "play request start",
+  49: "play request end",
+  50: "pause reason",
+
   /* QUEUE */
 
   101: "next request",
   102: "next response",
-  103: "next current received",
-  104: "queue apply",
-  105: "queue complete",
+  103: "queue generate",
+  104: "next current received",
+  105: "queue update",
+  106: "queue first play",
+  107: "queue complete",
 
 
   /* PLAY ACTION */
@@ -278,6 +304,201 @@ const write = logs => {
 
 const now = () =>
   new Date().toISOString()
+
+export const getAudioDebugState = audio => {
+
+  if (!audio) {
+    return {
+      exists: false
+    }
+  }
+
+  const mediaError = audio.error
+
+  return {
+
+    exists: true,
+
+    src:
+      audio.src || null,
+
+    currentSrc:
+      audio.currentSrc || null,
+
+    readyState:
+      audio.readyState,
+
+    networkState:
+      audio.networkState,
+
+    paused:
+      audio.paused,
+
+    ended:
+      audio.ended,
+
+    seeking:
+      audio.seeking,
+
+    currentTime:
+      audio.currentTime,
+
+    duration:
+      Number.isFinite(audio.duration)
+        ? audio.duration
+        : null,
+
+    volume:
+      audio.volume,
+
+    muted:
+      audio.muted,
+
+    playbackRate:
+      audio.playbackRate,
+
+    error:
+      mediaError
+        ? {
+            code: mediaError.code,
+            message: mediaError.message || null
+          }
+        : null
+
+  }
+
+}
+
+/* =========================
+   AUDIO DIAGNOSTIC
+========================= */
+
+export const getAudioDebugDetails = (
+  audio,
+  extra = {}
+) => {
+
+  if (!audio) {
+
+    return {
+      audioAvailable: false,
+      ...extra
+    }
+
+  }
+
+  const mediaError = audio.error
+
+  return {
+
+    audioAvailable: true,
+
+    src: (() => {
+
+      const src =
+        audio.currentSrc ||
+        audio.src ||
+        ""
+
+      if (!src) return null
+
+      try {
+
+        const url = new URL(src)
+
+        return {
+          origin: url.origin,
+          pathname: url.pathname,
+          protocol: url.protocol
+        }
+
+      } catch {
+
+        return {
+          rawType: typeof src,
+          length: src.length
+        }
+
+      }
+
+    })(),
+
+    readyState: audio.readyState,
+
+    currentSrc:
+      audio.currentSrc || null,
+
+    srcAttribute:
+      audio.getAttribute("src") || null,
+
+    preload:
+      audio.preload || null,
+
+    readyStateText:
+      ({
+        0: "HAVE_NOTHING",
+        1: "HAVE_METADATA",
+        2: "HAVE_CURRENT_DATA",
+        3: "HAVE_FUTURE_DATA",
+        4: "HAVE_ENOUGH_DATA"
+      })[audio.readyState] || "UNKNOWN",
+
+    networkState: audio.networkState,
+
+    networkStateText:
+      ({
+        0: "NETWORK_EMPTY",
+        1: "NETWORK_IDLE",
+        2: "NETWORK_LOADING",
+        3: "NETWORK_NO_SOURCE"
+      })[audio.networkState] || "UNKNOWN",
+
+    paused: audio.paused,
+
+    ended: audio.ended,
+
+    seeking: audio.seeking,
+
+    currentTime:
+      Number.isFinite(audio.currentTime)
+        ? Number(audio.currentTime.toFixed(3))
+        : null,
+
+    duration:
+      Number.isFinite(audio.duration)
+        ? Number(audio.duration.toFixed(3))
+        : null,
+
+    playbackRate: audio.playbackRate,
+
+    muted: audio.muted,
+
+    volume: audio.volume,
+
+    autoplay: audio.autoplay,
+
+    error: mediaError
+      ? {
+          code: mediaError.code,
+
+          codeText:
+            ({
+              1: "MEDIA_ERR_ABORTED",
+              2: "MEDIA_ERR_NETWORK",
+              3: "MEDIA_ERR_DECODE",
+              4: "MEDIA_ERR_SRC_NOT_SUPPORTED"
+            })[mediaError.code] || "UNKNOWN",
+
+          message:
+            mediaError.message || null
+        }
+      : null,
+
+    ...extra
+
+  }
+
+}
 
 
 /* =========================
@@ -363,12 +584,21 @@ export const debugProgress = (
   if (!session) return
 
   const log = {
+
     code,
+
+    text:
+      DEBUG_TEXT[code] ||
+      "unknown",
+
     time: now()
+
   }
 
-  if (details) {
+  if (details !== null) {
+
     log.details = details
+
   }
 
   session.logs.push(log)
@@ -408,7 +638,7 @@ const saveActive = session => {
 
   const index =
     logs.findIndex(
-      x => x.id === session.id
+      x => x.id === session.id && !x.error
     )
 
   if (index >= 0) {
@@ -441,7 +671,7 @@ export const replaceWithComplete = (
 
   const filtered =
     logs.filter(
-      x => x.id !== session.id
+      x => !(x.id === session.id && !x.error)
     )
 
   filtered.push({
@@ -481,10 +711,22 @@ export const debugError = (
   error,
   target = null,
   details = null,
-  session = null
+  session = null,
+  audio = null
 ) => {
 
   const logs = read()
+
+  const audioDetails =
+    audio
+      ? getAudioDebugDetails(audio)
+      : null
+
+
+  const mediaError =
+    audioDetails?.error ||
+    details?.audio?.error ||
+    null
 
   logs.push({
 
@@ -510,8 +752,31 @@ export const debugError = (
       error?.name ||
       null,
 
+    stack:
+      error?.stack ||
+      null,
+
     details:
       details || null,
+
+    errorCode:
+      error?.code ??
+      null,
+
+    mediaErrorCode:
+      mediaError?.code ??
+      null,
+
+    mediaErrorCodeText:
+      mediaError?.codeText ??
+      null,
+
+    mediaErrorMessage:
+      mediaError?.message ??
+      null,
+    
+    audio:
+    audioDetails,
 
     sessionDetails:
       session?.details || null,
@@ -521,6 +786,7 @@ export const debugError = (
   })
 
   write(logs)
+
 }
 
 
