@@ -60,6 +60,7 @@ export function SongsProvider({ children }) {
   const [currentId, setCurrentId] = useState(null)
   const currentIdRef = useRef(null)
   const countedRef = useRef(false)
+  const historyRecordedRef = useRef(null)
   const [queueIds, setQueueIds] = useState([])
   const [current, setCurrent] = useState(null)
   const [queue, setQueue] = useState([])
@@ -146,6 +147,48 @@ export function SongsProvider({ children }) {
       setHistoryMeta(data)
 
     } catch (e) {
+    }
+  }
+
+
+  const recordHistory = async (songId, session) => {
+
+    if (!songId) return
+
+    if (
+      historyRecordedRef.current === session?.id
+    ) {
+      return
+    }
+
+    if (session) {
+      historyRecordedRef.current = session.id
+    }
+
+    try {
+
+      await authfetch(
+        `/songs/${songId}/play`,
+        {
+          method: "POST"
+        }
+      )
+
+      await loadHistory()
+
+    } catch (e) {
+
+      debugError(
+        "PLAYBACK",
+        DEBUG_ERROR.PLAYBACK.HALF,
+        e,
+        songId,
+        {
+          reason: "history record"
+        },
+        session
+      )
+
     }
   }
 
@@ -446,6 +489,33 @@ export function SongsProvider({ children }) {
       return
     }
 
+
+    const previousSession =
+      playbackSessionRef.current
+
+    const previousSongId =
+      playbackSongIdRef.current
+
+
+    if (
+      previousSession &&
+      previousSongId &&
+      previousSongId !== id &&
+      previousSession.hasPlayed
+    ) {
+
+      recordHistory(
+        previousSongId,
+        previousSession
+      )
+
+      replaceWithComplete(
+        previousSession,
+        DEBUG_PROGRESS.PLAYBACK.COMPLETE
+      )
+
+    }
+
     currentIdRef.current = id
 
     let cancelled = false
@@ -463,6 +533,8 @@ export function SongsProvider({ children }) {
           loadId: myLoadId
         }
       )
+
+      session.hasPlayed = false
 
     playbackSessionRef.current =session
     playbackSongIdRef.current = id
@@ -1296,6 +1368,10 @@ export function SongsProvider({ children }) {
 
       const session = getSession()
 
+      if (session) {
+        session.hasPlayed = true
+      }
+
       debugProgress(
         session,
         DEBUG_PROGRESS.PLAYBACK.PLAYING_EVENT,
@@ -1682,73 +1758,11 @@ export function SongsProvider({ children }) {
     const onTimeUpdate = () => {
 
       if (audio.duration) {
+
         const percent =
           (audio.currentTime / audio.duration) * 100
 
         setProgress(percent)
-
-        if (
-          !countedRef.current &&
-          currentId &&
-          percent >= 50
-        ) {
-
-          countedRef.current = true
-
-          const session =
-            playbackSessionRef.current
-
-          if (session) {
-            debugProgress(
-              playbackSessionRef.current,
-              DEBUG_PROGRESS.PLAYBACK.HALF
-            )
-          } 
-
-          authfetch(
-            `/songs/${currentId}/play`,
-            { method:"POST" }
-          )
-          .then(loadHistory)
-          .catch(e => {
-
-            const session =
-              playbackSessionRef.current
-
-            debugError(
-              "PLAYBACK",
-              DEBUG_ERROR.PLAYBACK.HALF,
-              e,
-              currentId,
-              {
-                currentId,
-
-                currentTime:
-                  Number.isFinite(audio.currentTime)
-                    ? Number(
-                        audio.currentTime.toFixed(2)
-                      )
-                    : null,
-
-                duration:
-                  Number.isFinite(audio.duration)
-                    ? Number(
-                        audio.duration.toFixed(2)
-                      )
-                    : null,
-
-                readyState:
-                  audio.readyState,
-
-                networkState:
-                  audio.networkState
-              },
-              session
-            )
-
-          })
-
-        }
 
       } else {
 
@@ -2161,6 +2175,15 @@ export function SongsProvider({ children }) {
         session &&
         playbackSongIdRef.current === endedSongId
       ) {
+
+        if (session.hasPlayed) {
+
+          recordHistory(
+            endedSongId,
+            session
+          )
+
+        }
 
         replaceWithComplete(
           session,
